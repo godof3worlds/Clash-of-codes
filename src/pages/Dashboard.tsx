@@ -24,12 +24,12 @@ export const Dashboard: React.FC = () => {
           </div>
           <div className="flex items-center gap-1.5 mt-1">
             <span className="font-mono text-[11px] text-tertiary flex items-center gap-0.5">
-              <span className="material-symbols-outlined text-[14px]">trending_up</span> +140 XP
+              <span className="material-symbols-outlined text-[14px]">trending_up</span> +{user.xp} XP
             </span>
-            <span className="font-sans text-xs text-on-surface-variant">this week</span>
+            <span className="font-sans text-xs text-on-surface-variant">total earned</span>
           </div>
           <div className="mt-3 w-full bg-surface-container-lowest h-2 rounded-full overflow-hidden">
-            <div className="bg-gradient-to-r from-primary-container via-primary to-secondary h-full rounded-full transition-all duration-1000" style={{ width: `${(user.xp / user.nextLevelXp) * 100}%` }} />
+            <div className="bg-gradient-to-r from-primary-container via-primary to-secondary h-full rounded-full transition-all duration-1000" style={{ width: `${user.nextLevelXp > 0 ? Math.min(100, (user.xp / user.nextLevelXp) * 100) : 0}%` }} />
           </div>
           <div className="flex justify-between items-center mt-1">
             <span className="font-mono text-[11px] text-on-surface-variant">Lv. {user.level}</span>
@@ -80,7 +80,7 @@ export const Dashboard: React.FC = () => {
             <span className="font-mono text-sm text-on-surface-variant">/ 10</span>
           </div>
           <div className="flex items-center gap-1.5 mt-2">
-            <span className="px-2 py-0.5 rounded-full bg-secondary-container font-mono text-[11px] text-secondary font-bold">Balanced Growth</span>
+            <span className="px-2 py-0.5 rounded-full bg-secondary-container font-mono text-[11px] text-secondary font-bold">Initial Calibration</span>
           </div>
           <div className="mt-2 flex gap-1">
             {Array.from({ length: 10 }, (_, i) => (
@@ -99,17 +99,18 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="font-display text-2xl font-bold text-on-surface tracking-tight">{user.badgesCount}</span>
+            <span className="font-display text-2xl font-bold text-on-surface tracking-tight">{badges.length}</span>
             <span className="font-sans text-xs text-on-surface-variant font-medium">earned</span>
           </div>
           <div className="flex items-center gap-1.5 mt-3 flex-wrap">
-            {badges.slice(0, 4).map((b) => (
-              <div key={b.id} className="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center" title={b.name}>
-                <span className="material-symbols-outlined text-amber-400 text-[16px]">{b.icon}</span>
-              </div>
-            ))}
-            {badges.length > 4 && (
-              <span className="font-mono text-[11px] text-on-surface-variant ml-1">+{badges.length - 4} more</span>
+            {badges.length === 0 ? (
+              <span className="font-sans text-xs text-on-surface-variant italic">Solve problems to unlock trophies!</span>
+            ) : (
+              badges.slice(0, 4).map((b) => (
+                <div key={b.id} className="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center" title={b.name}>
+                  <span className="material-symbols-outlined text-amber-400 text-[16px]">{b.icon}</span>
+                </div>
+              ))
             )}
           </div>
         </div>
@@ -122,9 +123,9 @@ export const Dashboard: React.FC = () => {
           <div className="h-40 bg-gradient-to-br from-emerald-950/80 via-cyan-950/60 to-surface-container relative overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_50%,rgba(78,222,163,0.15),transparent_60%)]" />
             <div className="absolute bottom-4 left-5 right-5">
-              <span className="font-mono text-[10px] text-tertiary uppercase tracking-wider">Current Island</span>
-              <h3 className="font-display text-xl font-bold text-on-surface mt-0.5">{currentIsland.name}</h3>
-              <p className="font-sans text-xs text-on-surface-variant mt-1">{currentIsland.description}</p>
+              <span className="font-mono text-[10px] text-tertiary uppercase tracking-wider">Starting Island</span>
+              <h3 className="font-display text-xl font-bold text-on-surface mt-0.5">{currentIsland ? currentIsland.name : 'Python Shores'}</h3>
+              <p className="font-sans text-xs text-on-surface-variant mt-1">{currentIsland ? currentIsland.description : 'Begin your journey across coding archipelagos.'}</p>
             </div>
           </div>
           <div className="p-4">
@@ -132,7 +133,7 @@ export const Dashboard: React.FC = () => {
               onClick={() => setCurrentView('island-world')}
               className="w-full bg-gradient-to-r from-primary-container to-primary text-surface-container-lowest font-display font-bold text-sm py-2.5 rounded-xl hover:shadow-[0_0_20px_rgba(76,215,246,0.3)] transition-all flex items-center justify-center gap-2"
             >
-              Continue Conquest
+              Start First Conquest
               <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
             </button>
           </div>
@@ -144,29 +145,29 @@ export const Dashboard: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-secondary-container flex items-center justify-center">
               <span className="material-symbols-outlined text-secondary text-[20px]">psychology</span>
             </div>
-            <span className="font-display text-sm font-bold text-on-surface">AI Mentor Suggests</span>
+            <span className="font-display text-sm font-bold text-on-surface">AI Mentor Mission</span>
           </div>
           <p className="font-sans text-sm text-on-surface leading-relaxed">
-            Your array skills are strong! Try practicing <span className="text-primary font-bold">recursion</span> next. It'll unlock Data Forest island.
+            Welcome, Recruit! Begin by tackling <span className="text-primary font-bold">Two Sum</span> in the Practice Lab to conquer your very first territory.
           </p>
           <button
-            onClick={() => setCurrentView('ai-mentor')}
+            onClick={() => setCurrentView('practice-lab')}
             className="mt-3 font-sans text-xs text-secondary hover:text-primary transition-colors flex items-center gap-1"
           >
-            View Recommendations
+            Go to Practice Lab
             <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
           </button>
         </div>
 
         {/* Recent Activity Feed */}
         <div className="lg:col-span-1 bg-surface-container rounded-xl p-5 shadow-xl border border-surface-container-high/50">
-          <h3 className="font-display text-sm font-bold text-on-surface mb-3">Recent Activity</h3>
+          <h3 className="font-display text-sm font-bold text-on-surface mb-3">Quest Log</h3>
           <div className="space-y-3">
             {[
-              { icon: 'flag', text: 'Captured Island Territory 3', time: '2h ago', color: 'text-tertiary' },
-              { icon: 'terminal', text: 'Solved: Two Sum', time: '3h ago', color: 'text-primary' },
-              { icon: 'military_tech', text: 'Earned Badge: First Island', time: '1d ago', color: 'text-amber-400' },
-              { icon: 'trending_up', text: 'Streak reached 12 days!', time: '1d ago', color: 'text-error' },
+              { icon: 'flag', text: 'Enter Python Shores territory 1', time: 'Pending', color: 'text-tertiary' },
+              { icon: 'terminal', text: 'Solve your first kata puzzle', time: 'Pending', color: 'text-primary' },
+              { icon: 'military_tech', text: 'Earn your recruit trophy', time: 'Locked', color: 'text-amber-400' },
+              { icon: 'trending_up', text: 'Start your daily streak', time: 'Today', color: 'text-error' },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-7 h-7 rounded-lg bg-surface-container-highest flex items-center justify-center flex-shrink-0">
@@ -218,29 +219,33 @@ export const Dashboard: React.FC = () => {
 
         {/* Topic Strength Radar */}
         <div className="bg-surface-container rounded-xl p-5 shadow-xl border border-surface-container-high/50">
-          <h3 className="font-display text-sm font-bold text-on-surface mb-4">Topic Strengths</h3>
-          <div className="space-y-3">
-            {Object.entries(user.topicStrengths).map(([topic, strength]) => (
-              <div key={topic}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-sans text-xs text-on-surface">{topic}</span>
-                  <span className="font-mono text-[11px] text-on-surface-variant">{strength}%</span>
+          <h3 className="font-display text-sm font-bold text-on-surface mb-4">Topic Mastery</h3>
+          {Object.keys(user.topicStrengths).length === 0 ? (
+            <div className="p-8 text-center bg-surface-container-lowest rounded-xl border border-dashed border-surface-container-highest">
+              <span className="material-symbols-outlined text-4xl text-on-surface-variant/40 mb-2">insights</span>
+              <p className="font-sans text-sm text-on-surface font-medium">No submission telemetry yet</p>
+              <p className="font-sans text-xs text-on-surface-variant mt-1">Submit your code in Practice Lab to calibrate mastery levels.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {Object.entries(user.topicStrengths).map(([topic, strength]) => (
+                <div key={topic}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-sans text-xs text-on-surface">{topic}</span>
+                    <span className="font-mono text-[11px] text-on-surface-variant">{strength}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-surface-container-highest rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        strength >= 70 ? 'bg-tertiary' : strength >= 40 ? 'bg-amber-400' : 'bg-error'
+                      }`}
+                      style={{ width: `${strength}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full h-2 bg-surface-container-highest rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-700 ${
-                      strength >= 70 ? 'bg-tertiary' : strength >= 40 ? 'bg-amber-400' : 'bg-error'
-                    }`}
-                    style={{ width: `${strength}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 p-3 rounded-lg bg-surface-container-lowest border border-error/20">
-            <span className="font-mono text-[11px] text-error font-bold uppercase tracking-wider">Focus Areas</span>
-            <p className="font-sans text-xs text-on-surface-variant mt-1">{user.topicWeaknesses.join(', ')}</p>
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

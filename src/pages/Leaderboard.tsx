@@ -2,8 +2,22 @@ import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 
 export const Leaderboard: React.FC = () => {
-  const { leaderboard } = useStore();
+  const { leaderboard, user } = useStore();
   const [period, setPeriod] = useState<'global' | 'weekly' | 'monthly'>('global');
+
+  const displayList = leaderboard.length > 0 ? leaderboard : [
+    {
+      rank: 1,
+      id: user.id,
+      username: `${user.username} (You)`,
+      avatarUrl: user.avatarUrl,
+      score: user.xp * 10,
+      xp: user.xp,
+      problemsSolved: user.problemsSolved.total,
+      streakDays: user.streakDays,
+      isCurrentUser: true,
+    }
+  ];
 
   return (
     <div className="flex flex-col space-y-6">
@@ -27,29 +41,37 @@ export const Leaderboard: React.FC = () => {
         ))}
       </div>
 
-      {/* Top 3 Podium */}
-      <div className="grid grid-cols-3 gap-4">
-        {[leaderboard[1], leaderboard[0], leaderboard[2]].map((entry, i) => {
-          const podiumOrder = [2, 1, 3];
-          const isGold = podiumOrder[i] === 1;
-          const isSilver = podiumOrder[i] === 2;
-          return (
-            <div key={entry.id} className={`bg-surface-container rounded-xl p-5 shadow-xl border text-center transition-all ${
-              isGold ? 'border-amber-400/30 glow-primary' : isSilver ? 'border-gray-400/20' : 'border-amber-700/20'
-            } ${isGold ? 'lg:-mt-4' : ''}`}>
-              <div className="relative mx-auto w-16 h-16 mb-3">
-                <img src={entry.avatarUrl} alt={entry.username} className="w-full h-full rounded-full object-cover border-2" style={{ borderColor: isGold ? '#f59e0b' : isSilver ? '#9ca3af' : '#b45309' }} />
-                <div className={`absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                  isGold ? 'bg-amber-400 text-black' : isSilver ? 'bg-gray-400 text-black' : 'bg-amber-700 text-white'
-                }`}>{podiumOrder[i]}</div>
+      {/* Top 3 Podium (if enough players) */}
+      {displayList.length >= 3 ? (
+        <div className="grid grid-cols-3 gap-4">
+          {[displayList[1], displayList[0], displayList[2]].map((entry, i) => {
+            const podiumOrder = [2, 1, 3];
+            const isGold = podiumOrder[i] === 1;
+            const isSilver = podiumOrder[i] === 2;
+            return (
+              <div key={entry.id} className={`bg-surface-container rounded-xl p-5 shadow-xl border text-center transition-all ${
+                isGold ? 'border-amber-400/30 glow-primary' : isSilver ? 'border-gray-400/20' : 'border-amber-700/20'
+              } ${isGold ? 'lg:-mt-4' : ''}`}>
+                <div className="relative mx-auto w-16 h-16 mb-3">
+                  <img src={entry.avatarUrl} alt={entry.username} className="w-full h-full rounded-full object-cover border-2" style={{ borderColor: isGold ? '#f59e0b' : isSilver ? '#9ca3af' : '#b45309' }} />
+                  <div className={`absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                    isGold ? 'bg-amber-400 text-black' : isSilver ? 'bg-gray-400 text-black' : 'bg-amber-700 text-white'
+                  }`}>{podiumOrder[i]}</div>
+                </div>
+                <h4 className="font-display text-sm font-bold text-on-surface">{entry.username}</h4>
+                <p className="font-mono text-lg text-primary font-bold mt-1">{entry.score.toLocaleString()}</p>
+                <p className="font-mono text-[10px] text-on-surface-variant">{entry.xp.toLocaleString()} XP</p>
               </div>
-              <h4 className="font-display text-sm font-bold text-on-surface">{entry.username}</h4>
-              <p className="font-mono text-lg text-primary font-bold mt-1">{entry.score.toLocaleString()}</p>
-              <p className="font-mono text-[10px] text-on-surface-variant">{entry.xp.toLocaleString()} XP</p>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="bg-surface-container rounded-xl p-6 border border-surface-container-high/50 text-center">
+          <span className="material-symbols-outlined text-4xl text-primary mb-2">military_tech</span>
+          <h3 className="font-display text-base font-bold text-on-surface">New Season Initialized</h3>
+          <p className="font-sans text-xs text-on-surface-variant mt-1">Conquer territories and solve challenges to claim the #1 spot on the leaderboard.</p>
+        </div>
+      )}
 
       {/* Full Table */}
       <div className="bg-surface-container rounded-xl shadow-xl border border-surface-container-high/50 overflow-hidden">
@@ -66,7 +88,7 @@ export const Leaderboard: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {leaderboard.map((entry) => (
+              {displayList.map((entry) => (
                 <tr key={entry.id} className={`border-b border-surface-container-high/20 transition-colors ${
                   entry.isCurrentUser ? 'bg-primary/5' : 'hover:bg-surface-container-low/50'
                 }`}>

@@ -25,7 +25,7 @@ export const Profile: React.FC = () => {
             </div>
           </div>
           <h2 className="font-display text-xl font-bold text-on-surface">{user.username}</h2>
-          <p className="font-sans text-xs text-on-surface-variant mt-1">Novice Voyager • Keep coding daily!</p>
+          <p className="font-sans text-xs text-on-surface-variant mt-1">Recruit Voyager • Begin your conquests!</p>
 
           {/* XP Bar */}
           <div className="mt-4">
@@ -34,7 +34,7 @@ export const Profile: React.FC = () => {
               <span className="text-on-surface-variant">{user.nextLevelXp}</span>
             </div>
             <div className="w-full h-2 bg-surface-container-highest rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-primary to-tertiary rounded-full" style={{ width: `${(user.xp / user.nextLevelXp) * 100}%` }} />
+              <div className="h-full bg-gradient-to-r from-primary to-tertiary rounded-full" style={{ width: `${user.nextLevelXp > 0 ? (user.xp / user.nextLevelXp) * 100 : 0}%` }} />
             </div>
           </div>
 
@@ -50,7 +50,7 @@ export const Profile: React.FC = () => {
             </div>
             <div className="bg-surface-container-lowest rounded-lg p-3">
               <span className="font-display text-lg font-bold text-on-surface block">{totalCaptured}</span>
-              <span className="font-mono text-[10px] text-on-surface-variant">Islands</span>
+              <span className="font-mono text-[10px] text-on-surface-variant">Territories</span>
             </div>
           </div>
         </div>
@@ -61,49 +61,54 @@ export const Profile: React.FC = () => {
             <h3 className="font-display text-base font-bold text-on-surface">Badges ({badges.length})</h3>
             <div className="flex gap-1">
               {['all', 'learning', 'conquest', 'streak', 'special'].map((cat) => (
-                <span key={cat} className="px-2 py-0.5 rounded-full bg-surface-container-high font-mono text-[10px] text-on-surface-variant capitalize cursor-pointer hover:text-on-surface transition-colors">{cat}</span>
+                <span key={cat} className="px-2 py-0.5 rounded-full bg-surface-container-high font-mono text-[10px] text-on-surface-variant capitalize">{cat}</span>
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {badges.map((badge) => (
-              <div key={badge.id} className={`p-4 rounded-xl border text-center transition-all hover:scale-[1.02] ${
-                badge.isCustom ? 'bg-secondary/10 border-secondary/30 glow-secondary' : 'bg-surface-container-lowest border-surface-container-high/30'
-              }`}>
-                <div className={`w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-2 ${
-                  badge.isCustom ? 'bg-secondary-container' : 'bg-surface-container-high'
+          {badges.length === 0 ? (
+            <div className="p-12 text-center bg-surface-container-lowest rounded-xl border border-dashed border-surface-container-highest">
+              <span className="material-symbols-outlined text-4xl text-on-surface-variant/40 mb-2">military_tech</span>
+              <h4 className="font-display text-sm font-bold text-on-surface">No Badges Earned Yet</h4>
+              <p className="font-sans text-xs text-on-surface-variant mt-1">Conquer territories, solve katas, and maintain streaks to unlock badges!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {badges.map((badge) => (
+                <div key={badge.id} className={`p-4 rounded-xl border text-center transition-all hover:scale-[1.02] ${
+                  badge.isCustom ? 'bg-secondary/10 border-secondary/30 glow-secondary' : 'bg-surface-container-lowest border-surface-container-high/30'
                 }`}>
-                  <span className={`material-symbols-outlined text-[28px] ${
-                    badge.category === 'learning' ? 'text-primary' :
-                    badge.category === 'conquest' ? 'text-tertiary' :
-                    badge.category === 'streak' ? 'text-amber-400' :
-                    'text-secondary'
-                  }`}>{badge.icon}</span>
+                  <div className={`w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-2 ${
+                    badge.isCustom ? 'bg-secondary-container' : 'bg-surface-container-high'
+                  }`}>
+                    <span className={`material-symbols-outlined text-[28px] ${
+                      badge.category === 'learning' ? 'text-primary' :
+                      badge.category === 'conquest' ? 'text-tertiary' :
+                      badge.category === 'streak' ? 'text-amber-400' :
+                      'text-secondary'
+                    }`}>{badge.icon}</span>
+                  </div>
+                  <h4 className="font-display text-xs font-bold text-on-surface mb-0.5">{badge.name}</h4>
+                  <p className="font-sans text-[10px] text-on-surface-variant leading-tight">{badge.description}</p>
+                  {badge.earnedAt && (
+                    <span className="font-mono text-[9px] text-on-surface-variant/60 mt-1 block">{badge.earnedAt}</span>
+                  )}
                 </div>
-                <h4 className="font-display text-xs font-bold text-on-surface mb-0.5">{badge.name}</h4>
-                <p className="font-sans text-[10px] text-on-surface-variant leading-tight">{badge.description}</p>
-                {badge.earnedAt && (
-                  <span className="font-mono text-[9px] text-on-surface-variant/60 mt-1 block">{badge.earnedAt}</span>
-                )}
-                {badge.isCustom && (
-                  <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-secondary/20 font-mono text-[9px] text-secondary">Custom</span>
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Learning Goals & Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-surface-container rounded-xl p-5 shadow-xl border border-surface-container-high/50">
-          <h3 className="font-display text-sm font-bold text-on-surface mb-3">Learning Goals</h3>
+          <h3 className="font-display text-sm font-bold text-on-surface mb-3">Beginner Objectives</h3>
           <div className="space-y-3">
             {[
-              { text: 'Master arrays & hash maps', done: true },
-              { text: 'Become a full-stack developer', done: false },
-              { text: 'Solve 100 coding problems', done: false },
-              { text: 'Conquer all 4 islands', done: false },
+              { text: 'Conquer your first territory on Python Shores', done: false },
+              { text: 'Solve 1 coding puzzle in the Practice Lab', done: false },
+              { text: 'Complete a 3-day coding streak', done: false },
+              { text: 'Join an Island Clash multiplayer room', done: false },
             ].map((goal, i) => (
               <div key={i} className="flex items-center gap-2.5">
                 <span className={`material-symbols-outlined text-[18px] ${goal.done ? 'text-tertiary' : 'text-on-surface-variant/40'}`}>
@@ -116,22 +121,11 @@ export const Profile: React.FC = () => {
         </div>
 
         <div className="bg-surface-container rounded-xl p-5 shadow-xl border border-surface-container-high/50">
-          <h3 className="font-display text-sm font-bold text-on-surface mb-3">Recent Activity</h3>
-          <div className="space-y-3">
-            {[
-              { text: 'Captured Island Territory 3', time: '2 hours ago', icon: 'flag', color: 'text-tertiary' },
-              { text: 'Solved: Two Sum', time: '3 hours ago', icon: 'terminal', color: 'text-primary' },
-              { text: 'Custom Badge Earned', time: '1 day ago', icon: 'military_tech', color: 'text-amber-400' },
-              { text: 'Max Subarray - Failed', time: '2 days ago', icon: 'close', color: 'text-error' },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded-lg bg-surface-container-highest flex items-center justify-center flex-shrink-0">
-                  <span className={`material-symbols-outlined text-[14px] ${item.color}`}>{item.icon}</span>
-                </div>
-                <span className="font-sans text-xs text-on-surface flex-1">{item.text}</span>
-                <span className="font-mono text-[10px] text-on-surface-variant flex-shrink-0">{item.time}</span>
-              </div>
-            ))}
+          <h3 className="font-display text-sm font-bold text-on-surface mb-3">Activity Status</h3>
+          <div className="p-6 text-center bg-surface-container-lowest rounded-xl">
+            <span className="material-symbols-outlined text-3xl text-primary/60 mb-2">history_edu</span>
+            <p className="font-sans text-xs text-on-surface font-medium">Account Initialized (Zero Base)</p>
+            <p className="font-sans text-[11px] text-on-surface-variant mt-0.5">Your journey starts now. Take on challenges to populate your log.</p>
           </div>
         </div>
       </div>

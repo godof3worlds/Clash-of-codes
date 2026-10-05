@@ -198,39 +198,47 @@ export const AIMentor: React.FC = () => {
           {/* Existing Courses */}
           <div className="space-y-4">
             <h3 className="font-display text-base font-bold text-on-surface">Your Courses</h3>
-            {courses.map((course) => (
-              <div key={course.id} className="bg-surface-container rounded-xl p-5 shadow-xl border border-surface-container-high/50">
-                <h4 className="font-display text-sm font-bold text-on-surface mb-1">{course.title}</h4>
-                <p className="font-sans text-xs text-on-surface-variant mb-3">{course.description}</p>
-                <div className="flex items-center gap-3 text-[11px] font-mono text-on-surface-variant mb-3">
-                  <span>{course.modulesCount} Modules</span>
-                  <span>•</span>
-                  <span>{course.lessonsCount} Lessons</span>
-                  <span>•</span>
-                  <span>{course.practiceProblemsCount} Problems</span>
-                </div>
-                {/* Progress bar */}
-                <div className="w-full h-2 bg-surface-container-highest rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-tertiary-container to-tertiary rounded-full transition-all" style={{ width: `${course.progressPercent}%` }} />
-                </div>
-                <span className="font-mono text-[10px] text-on-surface-variant mt-1 block">{course.progressPercent}% complete</span>
-
-                {/* Modules list */}
-                <div className="mt-3 space-y-1.5">
-                  {course.modules.slice(0, 4).map((mod) => (
-                    <div key={mod.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-container-lowest/50">
-                      <span className={`material-symbols-outlined text-[14px] ${mod.completed ? 'text-tertiary' : 'text-on-surface-variant/50'}`}>
-                        {mod.completed ? 'check_circle' : 'radio_button_unchecked'}
-                      </span>
-                      <span className={`font-sans text-xs ${mod.completed ? 'text-on-surface' : 'text-on-surface-variant'}`}>{mod.title}</span>
-                    </div>
-                  ))}
-                  {course.modules.length > 4 && (
-                    <span className="font-mono text-[10px] text-on-surface-variant pl-2">+{course.modules.length - 4} more modules...</span>
-                  )}
-                </div>
+            {courses.length === 0 ? (
+              <div className="bg-surface-container rounded-xl p-8 shadow-xl border border-surface-container-high/50 text-center">
+                <span className="material-symbols-outlined text-4xl text-on-surface-variant/40 mb-2">auto_stories</span>
+                <h4 className="font-display text-sm font-bold text-on-surface">No Courses Generated Yet</h4>
+                <p className="font-sans text-xs text-on-surface-variant mt-1">Use the generator on the left to build a custom syllabus powered by Gemma AI.</p>
               </div>
-            ))}
+            ) : (
+              courses.map((course) => (
+                <div key={course.id} className="bg-surface-container rounded-xl p-5 shadow-xl border border-surface-container-high/50">
+                  <h4 className="font-display text-sm font-bold text-on-surface mb-1">{course.title}</h4>
+                  <p className="font-sans text-xs text-on-surface-variant mb-3">{course.description}</p>
+                  <div className="flex items-center gap-3 text-[11px] font-mono text-on-surface-variant mb-3">
+                    <span>{course.modulesCount} Modules</span>
+                    <span>•</span>
+                    <span>{course.lessonsCount} Lessons</span>
+                    <span>•</span>
+                    <span>{course.practiceProblemsCount} Problems</span>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="w-full h-2 bg-surface-container-highest rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-tertiary-container to-tertiary rounded-full transition-all" style={{ width: `${course.progressPercent}%` }} />
+                  </div>
+                  <span className="font-mono text-[10px] text-on-surface-variant mt-1 block">{course.progressPercent}% complete</span>
+
+                  {/* Modules list */}
+                  <div className="mt-3 space-y-1.5">
+                    {course.modules.slice(0, 4).map((mod) => (
+                      <div key={mod.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-container-lowest/50">
+                        <span className={`material-symbols-outlined text-[14px] ${mod.completed ? 'text-tertiary' : 'text-on-surface-variant/50'}`}>
+                          {mod.completed ? 'check_circle' : 'radio_button_unchecked'}
+                        </span>
+                        <span className={`font-sans text-xs ${mod.completed ? 'text-on-surface' : 'text-on-surface-variant'}`}>{mod.title}</span>
+                      </div>
+                    ))}
+                    {course.modules.length > 4 && (
+                      <span className="font-mono text-[10px] text-on-surface-variant pl-2">+{course.modules.length - 4} more modules...</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
