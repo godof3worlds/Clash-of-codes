@@ -1,51 +1,143 @@
 import { AIFeedback, Course, Problem, UserProfile } from '../types';
 
+const env = (import.meta as any).env || {};
+const GEMMA_API_KEY = env.VITE_GEMMA_API_KEY || '';
+
+export async function callGeminiApi(prompt: string, systemInstruction?: string): Promise<string> {
+  if (!GEMMA_API_KEY) {
+    throw new Error('AI is offline: VITE_GEMMA_API_KEY is not configured.');
+  }
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMMA_API_KEY}`;
+  
+  const body: any = {
+    contents: [
+      {
+        parts: [
+          {
+            text: prompt,
+          },
+        ],
+      },
+    ],
+  };
+
+  if (systemInstruction) {
+    body.systemInstruction = {
+      parts: [{ text: systemInstruction }],
+    };
+  }
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.warn('AI API Error Response:', errText);
+      throw new Error(`AI is offline (HTTP ${response.status})`);
+    }
+
+    const json = await response.json();
+    const candidateText = json.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!candidateText) {
+      throw new Error('AI is offline: No response generated.');
+    }
+    return candidateText;
+  } catch (err: any) {
+    console.warn('AI call failure:', err.message);
+    throw new Error('AI is offline');
+  }
+}
+
+export async function generateAIProblem(
+  topic: string = 'Arrays',
+  difficulty: 'Easy' | 'Medium' | 'Hard' = 'Easy',
+  language: string = 'Python'
+): Promise<Problem> {
+  const prompt = `Generate a coding problem on topic "${topic}" with difficulty "${difficulty}".
+Output ONLY valid JSON without markdown fences matching this exact schema:
+{
+  "title": "Problem Title",
+  "difficulty": "${difficulty}",
+  "difficultyValue": ${difficulty === 'Hard' ? 3 : difficulty === 'Medium' ? 2 : 1},
+  "topic": "${topic}",
+  "language": "${language}",
+  "description": "Clear problem description...",
+  "constraints": ["1 <= n <= 10^5", "Time limit: 2.0s"],
+  "examples": [{"input": "sample input", "output": "sample output", "explanation": "why"}],
+  "starterCode": {
+    "Python": "def solve(nums):\\n    # write code here\\n    pass\\n\\nprint(solve([1, 2]))",
+    "JavaScript": "function solve(nums) {\\n  // write code here\\n}\\nconsole.log(solve([1, 2]));"
+  },
+  "testCases": [
+    {"id": "tc1", "input": "[1, 2]", "expectedOutput": "3"},
+    {"id": "tc2", "input": "[3, 4]", "expectedOutput": "7"}
+  ],
+  "points": ${difficulty === 'Hard' ? 200 : difficulty === 'Medium' ? 150 : 100}
+}`;
+
+  try {
+    const raw = await callGeminiApi(prompt, 'You are an expert algorithms challenge designer for a gamified coding platform.');
+    const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    return {
+      ...parsed,
+      id: `ai_gen_${Date.now()}`,
+    };
+  } catch (err: any) {
+    // If AI offline, throw explicit error
+    throw new Error('AI is offline');
+  }
+}
+
 export async function analyzeCodeWithGemma(
   problem: Problem,
   userCode: string,
   passed: boolean
 ): Promise<AIFeedback> {
-  // Simulates Gemma 4 LLM analysis of code logic, complexity, mistakes, and suggestions
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      if (passed) {
-        resolve({
-          summary: `Your ${problem.language} solution for "${problem.title}" correctly solves the problem using an optimal hash-map or two-pointer approach!`,
-          mistakes: [],
-          improvements: [
-            'Consider adding explicit type annotations to improve readability.',
-            'Ensure variable names clearly describe their purpose (e.g. `numToIdx` instead of `m`).',
-          ],
-          efficiency: {
-            timeComplexity: 'O(N)',
-            spaceComplexity: 'O(N)',
-            suggestions: 'Your algorithm runs in linear O(N) time complexity, which meets the optimal constraint requirement.',
-          },
-          recommendedTopic: 'Two Pointers & Sliding Window',
-          nextSteps: 'You are ready to attempt Medium difficulty challenges in Algorithm Atoll!',
-        });
-      } else {
-        resolve({
-          summary: `Your code attempted to solve "${problem.title}", but failed on secret test cases or encountered a logic/boundary error.`,
-          mistakes: [
-            'Off-by-one array index boundary check during iteration.',
-            'Potential unhandled null/undefined value when target difference is missing.',
-          ],
-          improvements: [
-            'Dry run your loop boundary using a small sample array like `[2, 7]`.',
-            'Initialize hash keys before querying to avoid KeyErrors.',
-          ],
-          efficiency: {
-            timeComplexity: 'O(N^2)',
-            spaceComplexity: 'O(1)',
-            suggestions: 'Nested loop scanning leads to O(N^2) time complexity. Using a Hash Set reduces lookup to O(1).',
-          },
-          recommendedTopic: 'Array Indexing & Hash Map Basics',
-          nextSteps: 'Try practicing 2 Easy array problems before retrying this territory!',
-        });
-      }
-    }, 700);
-  });
+  const prompt = `Review this ${problem.language} code for problem "${problem.title}". Test pass status: ${passed ? 'PASSED' : 'FAILED'}.
+User Code:
+${userCode}
+
+Return ONLY valid JSON matching this schema:
+{
+  "summary": "Brief analysis summary",
+  "mistakes": ["mistake 1 if any"],
+  "improvements": ["improvement 1", "improvement 2"],
+  "efficiency": {
+    "timeComplexity": "O(N)",
+    "spaceComplexity": "O(1)",
+    "suggestions": "Efficiency notes"
+  },
+  "recommendedTopic": "${problem.topic}",
+  "nextSteps": "Next practice recommendation"
+}`;
+
+  try {
+    const raw = await callGeminiApi(prompt, 'You are a code analysis and optimization engine.');
+    const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleaned);
+  } catch (err) {
+    // Return offline notice if AI is unavailable
+    return {
+      summary: 'AI is offline. Unable to generate real-time feedback at this moment.',
+      mistakes: ['AI is offline: Check internet connection or API status.'],
+      improvements: ['Verify edge cases and syntax manually while offline.'],
+      efficiency: {
+        timeComplexity: 'Offline',
+        spaceComplexity: 'Offline',
+        suggestions: 'AI is offline.',
+      },
+      recommendedTopic: problem.topic,
+      nextSteps: 'Continue practicing with offline test cases.',
+    };
+  }
 }
 
 export async function askAIMentor(
@@ -53,24 +145,15 @@ export async function askAIMentor(
   userProfile: UserProfile,
   assistanceLevel: number = 1
 ): Promise<string> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const lower = question.toLowerCase();
-      if (lower.includes('recursion') || lower.includes('recurse')) {
-        resolve(
-          `🧙 **AI Mentor (Level ${assistanceLevel} Hint):**\n\nRecursion relies on two core parts:\n1. **Base Case:** The stopping condition that prevents infinite call stacks.\n2. **Recursive Step:** Reducing the problem to a smaller sub-problem.\n\n*Suggestion:* Start by writing \`if n <= 1: return n\` first!`
-        );
-      } else if (lower.includes('next') || lower.includes('study') || lower.includes('recommend')) {
-        resolve(
-          `🧙 **AI Mentor Learning Recommendation:**\n\nBased on your recent 12-day streak and 85% score in Arrays:\n1. **Topic to Revise:** Recursion & Linked Lists (Current Strength: 45%).\n2. **Target Island:** Conquer **Territory 4: Function Fort** in Python Shores.\n3. **Recommended Course:** Module 4 in *Data Structures & Algorithms* course!`
-        );
-      } else {
-        resolve(
-          `🧙 **AI Mentor:**\n\nGreat question! In programming, breaking down complex requirements into smaller testable functions is key. To conquer your next territory, focus on maintaining clean O(N) linear time complexity!`
-        );
-      }
-    }, 600);
-  });
+  const prompt = `User Profile (Level ${userProfile.level}, XP ${userProfile.xp}, Streak: ${userProfile.streakDays}).
+User Question: "${question}"
+Assistance Level Hint (1 = Socratic hint, 3 = code explanation). Provide a helpful concise answer formatted with markdown.`;
+
+  try {
+    return await callGeminiApi(prompt, 'You are CodeConquer AI Mentor, an encouraging coding sensei.');
+  } catch (err) {
+    return 'AI is offline. Please check your network connection or API key configuration.';
+  }
 }
 
 export async function generateAICourse(
@@ -79,42 +162,39 @@ export async function generateAICourse(
   language: string,
   timeCommitment: string
 ): Promise<Course> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        id: `course_gen_${Date.now()}`,
-        title: `Custom Course: ${topic} (${level})`,
-        description: `AI-generated personalized learning path for ${topic} in ${language} designed for ${timeCommitment}/week.`,
-        level,
-        language,
-        estimatedHours: 12,
-        modulesCount: 5,
-        lessonsCount: 25,
-        practiceProblemsCount: 50,
-        progressPercent: 0,
-        modules: [
-          { id: 'cm1', title: `1. Fundamentals of ${topic}`, description: `Core concepts, syntax, and foundational patterns in ${language}.`, durationMinutes: 45, completed: false, topics: ['Syntax', 'Variables', 'Logic'] },
-          { id: 'cm2', title: `2. Intermediate Patterns & Optimization`, description: 'Common algorithmic patterns, edge-case handling, and performance tuning.', durationMinutes: 60, completed: false, topics: ['Pointers', 'Hash Maps'] },
-          { id: 'cm3', title: '3. Real-World Applications & Kata', description: 'Interactive problem-solving challenges matching interview standards.', durationMinutes: 90, completed: false, topics: ['Problem Solving', 'Unit Testing'] },
-          { id: 'cm4', title: '4. Advanced Techniques & Complexity', description: 'Deep dive into space and time complexity optimizations.', durationMinutes: 75, completed: false, topics: ['Big-O', 'Refactoring'] },
-          { id: 'cm5', title: '5. Capstone Assessment', description: 'Final island conquest challenge validating complete topic mastery.', durationMinutes: 120, completed: false, topics: ['Capstone', 'Assessment'] },
-        ],
-      });
-    }, 1000);
-  });
-}
+  const prompt = `Generate a structured coding course for topic "${topic}", skill level "${level}", language "${language}", commit "${timeCommitment}".
+Return ONLY valid JSON:
+{
+  "title": "Course Title",
+  "description": "Short description",
+  "level": "${level}",
+  "language": "${language}",
+  "estimatedHours": 10,
+  "modulesCount": 4,
+  "lessonsCount": 16,
+  "practiceProblemsCount": 30,
+  "progressPercent": 0,
+  "modules": [
+    {
+      "id": "m1",
+      "title": "Module 1: Title",
+      "description": "Module description",
+      "durationMinutes": 45,
+      "completed": false,
+      "topics": ["Topic 1", "Topic 2"]
+    }
+  ]
+}`;
 
-export async function performWebResearch(query: string) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        query,
-        sources: [
-          { title: 'Python Official Documentation - Data Structures', url: 'https://docs.python.org/3/tutorial/datastructures.html', summary: 'Covers lists, dictionaries, tuples, and built-in sequence operations.' },
-          { title: 'GeeksforGeeks - Time and Space Complexity Analysis', url: 'https://www.geeksforgeeks.org/analysis-algorithms-big-o-analysis/', summary: 'Detailed walkthrough of Big-O, Big-Omega, and Big-Theta notations.' },
-        ],
-        sanitizedContent: `Web Research Summary for "${query}":\n\nStandard algorithmic best practices recommend using Hash Sets for O(1) membership testing instead of array linear scans O(N). Always account for empty inputs and boundary conditions.`,
-      });
-    }, 800);
-  });
+  try {
+    const raw = await callGeminiApi(prompt, 'You are an educational syllabus architect.');
+    const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    return {
+      ...parsed,
+      id: `course_ai_${Date.now()}`,
+    };
+  } catch (err) {
+    throw new Error('AI is offline');
+  }
 }

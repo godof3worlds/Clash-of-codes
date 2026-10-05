@@ -1,19 +1,43 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
+import { generateAIProblem } from '../services/gemma';
 
 export const IslandWorld: React.FC = () => {
-  const { islands, setActiveIsland, activeIslandId, setCurrentView, setActiveProblem, problems } = useStore();
+  const { islands, setActiveIsland, activeIslandId, setCurrentView, setActiveProblem, problems, showToast } = useStore();
   const [selectedIsland, setSelectedIsland] = useState(activeIslandId);
+  const [isGenerating, setIsGenerating] = useState(false);
   const island = islands.find((i) => i.id === selectedIsland) || islands[0];
 
   const handleTerritoryClick = (territoryId: string) => {
     const territory = island.territories.find((t) => t.id === territoryId);
     if (!territory || territory.status === 'locked') return;
-    const prob = problems.find((p) => p.id === territory.problemId);
+    const prob = problems.find((p) => p.id === territory.problemId) || problems[0];
     if (prob) {
       setActiveProblem(prob);
       setActiveIsland(island.id);
       setCurrentView('practice-lab');
+    }
+  };
+
+  const handleGenerateTerritoryChallenge = async (territoryId: string) => {
+    const territory = island.territories.find((t) => t.id === territoryId);
+    if (!territory) return;
+    setIsGenerating(true);
+    try {
+      const newProb = await generateAIProblem(
+        island.name.replace(' Shores', '').replace(' Lagoon', '').replace(' Archipelago', '').replace(' Atoll', ''),
+        territory.difficulty,
+        'Python'
+      );
+      setActiveProblem(newProb);
+      setActiveIsland(island.id);
+      showToast(`⚔️ AI generated new battle kata: "${newProb.title}"!`);
+      setCurrentView('practice-lab');
+    } catch (err) {
+      showToast('⚠️ AI is offline. Launching standard territory kata.');
+      handleTerritoryClick(territoryId);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -38,10 +62,10 @@ export const IslandWorld: React.FC = () => {
   return (
     <div className="flex flex-col space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-on-surface">Island World</h1>
-          <p className="font-sans text-sm text-on-surface-variant mt-1">Explore islands, capture territories, grow your skills.</p>
+          <p className="font-sans text-sm text-on-surface-variant mt-1">Explore islands, conquer territories, and generate AI battle challenges.</p>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -69,7 +93,6 @@ export const IslandWorld: React.FC = () => {
             ter.connectedTerritoryIds.map((connId) => {
               const conn = island.territories.find((t) => t.id === connId);
               if (!conn) return null;
-              // Only draw once per pair
               if (ter.id > connId) return null;
               return (
                 <line
@@ -133,12 +156,11 @@ export const IslandWorld: React.FC = () => {
           return (
             <div
               key={ter.id}
-              onClick={() => handleTerritoryClick(ter.id)}
               className={`bg-surface-container rounded-xl p-4 shadow-lg border transition-all duration-200 ${
-                ter.status === 'available' ? 'border-primary/30 hover:glow-primary cursor-pointer' :
+                ter.status === 'available' ? 'border-primary/30 hover:glow-primary' :
                 ter.status === 'captured' ? 'border-tertiary/20 opacity-80' :
-                ter.status === 'in_progress' ? 'border-amber-400/30 cursor-pointer' :
-                'border-surface-container-high/30 opacity-50 cursor-not-allowed'
+                ter.status === 'in_progress' ? 'border-amber-400/30' :
+                'border-surface-container-high/30 opacity-50'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
@@ -149,15 +171,33 @@ export const IslandWorld: React.FC = () => {
                   'bg-error/20 text-error'
                 }`}>{ter.difficulty}</span>
               </div>
-              {prob && <p className="font-sans text-xs text-on-surface-variant">Challenge: {prob.title}</p>}
-              <div className="flex items-center gap-2 mt-2">
+              {prob && <p className="font-sans text-xs text-on-surface-variant">Default: {prob.title}</p>}
+              <div className="flex items-center justify-between mt-3">
                 <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] ${
                   ter.status === 'captured' ? 'bg-tertiary/20 text-tertiary' :
                   ter.status === 'available' ? 'bg-primary/20 text-primary' :
                   ter.status === 'in_progress' ? 'bg-amber-400/20 text-amber-400' :
                   'bg-surface-container-highest text-on-surface-variant'
                 }`}>{statusLabel(ter.status)}</span>
-                {prob && <span className="font-mono text-[10px] text-on-surface-variant">{prob.points} XP</span>}
+                
+                {ter.status !== 'locked' && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleGenerateTerritoryChallenge(ter.id)}
+                      disabled={isGenerating}
+                      className="px-2 py-1 bg-secondary/20 hover:bg-secondary/30 text-secondary rounded-lg font-mono text-[10px] font-bold transition-all disabled:opacity-50"
+                      title="Generate dynamic AI question for this node"
+                    >
+                      ⚡ AI Battle
+                    </button>
+                    <button
+                      onClick={() => handleTerritoryClick(ter.id)}
+                      className="px-2.5 py-1 bg-primary text-surface-container-lowest rounded-lg font-sans text-xs font-bold hover:shadow-md transition-all"
+                    >
+                      Enter
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           );
