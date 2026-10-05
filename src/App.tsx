@@ -13,7 +13,11 @@ import { Settings } from './pages/Settings';
 import { useStore } from './store/useStore';
 
 const App: React.FC = () => {
-  const { currentView, toastMessage, clearToast } = useStore();
+  const { currentView, toastMessage, clearToast, syncWithDatabase } = useStore();
+
+  useEffect(() => {
+    syncWithDatabase();
+  }, [syncWithDatabase]);
 
   useEffect(() => {
     if (toastMessage) {

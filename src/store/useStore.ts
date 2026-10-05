@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { ViewMode, UserProfile, Island, Problem, ClashRoom, Badge, Course, AIFeedback, LeaderboardEntry } from '../types';
 import { INITIAL_USER_PROFILE, INITIAL_ISLANDS, MOCK_PROBLEMS, MOCK_BADGES, MOCK_LEADERBOARD, MOCK_COURSES } from '../data/mockData';
+import { fetchDbIslands, fetchDbLeaderboard, fetchDbProblems, fetchDbCourses, saveDbSubmission, saveDbCourse } from '../services/supabase';
 
 interface AppState {
   currentView: ViewMode;
@@ -10,6 +11,10 @@ interface AppState {
   badges: Badge[];
   leaderboard: LeaderboardEntry[];
   courses: Course[];
+  
+  // Database Status
+  dbSyncStatus: 'connected' | 'syncing' | 'offline';
+  isLoadingData: boolean;
   
   // Active states
   activeIslandId: string;
@@ -24,6 +29,7 @@ interface AppState {
   showReportModal: boolean;
   
   // Actions
+  syncWithDatabase: () => Promise<void>;
   setCurrentView: (view: ViewMode) => void;
   setActiveIsland: (islandId: string) => void;
   setActiveProblem: (problem: Problem) => void;
@@ -58,6 +64,9 @@ export const useStore = create<AppState>((set, get) => ({
   leaderboard: MOCK_LEADERBOARD,
   courses: MOCK_COURSES,
   
+  dbSyncStatus: 'connected',
+  isLoadingData: false,
+  
   activeIslandId: 'python-shores',
   activeProblem: MOCK_PROBLEMS[0],
   currentCode: MOCK_PROBLEMS[0].starterCode['Python'],
@@ -67,6 +76,30 @@ export const useStore = create<AppState>((set, get) => ({
   
   toastMessage: null,
   showReportModal: false,
+
+  syncWithDatabase: async () => {
+    set({ dbSyncStatus: 'syncing', isLoadingData: true });
+    try {
+      const [dbIslands, dbLeaderboard, dbProblems, dbCourses] = await Promise.all([
+        fetchDbIslands(),
+        fetchDbLeaderboard(),
+        fetchDbProblems(),
+        fetchDbCourses(),
+      ]);
+
+      set((state) => ({
+        islands: dbIslands.length > 0 ? dbIslands : state.islands,
+        leaderboard: dbLeaderboard.length > 0 ? dbLeaderboard : state.leaderboard,
+        problems: dbProblems.length > 0 ? dbProblems : state.problems,
+        courses: dbCourses.length > 0 ? dbCourses : state.courses,
+        dbSyncStatus: 'connected',
+        isLoadingData: false,
+      }));
+    } catch (err) {
+      console.warn('Database sync issue, falling back to local dataset:', err);
+      set({ dbSyncStatus: 'offline', isLoadingData: false });
+    }
+  },
   
   setCurrentView: (view) => set({ currentView: view }),
   
@@ -126,13 +159,10 @@ export const useStore = create<AppState>((set, get) => ({
       const updatedIslands = state.islands.map((isl) => {
         if (isl.id !== islandId) return isl;
         
-        let newlyCapturedCount = 0;
         const updatedTerritories = isl.territories.map((ter) => {
           if (ter.id === territoryId) {
-            newlyCapturedCount++;
             return { ...ter, status: 'captured' as const, capturedByPlayerId: state.user.id };
           }
-          // Unlock connected territories if they were locked
           if (ter.connectedTerritoryIds.includes(territoryId) && ter.status === 'locked') {
             return { ...ter, status: 'available' as const };
           }
@@ -232,7 +262,8 @@ export const useStore = create<AppState>((set, get) => ({
   
   addCourse: (course) => {
     set((state) => ({ courses: [course, ...state.courses] }));
-    get().showToast('📚 New Custom AI Course Added!');
+    saveDbCourse(course);
+    get().showToast('📚 New Custom AI Course Added & Synced with DB!');
   },
   
   showToast: (msg) => set({ toastMessage: msg }),
