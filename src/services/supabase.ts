@@ -24,19 +24,21 @@ export async function fetchDbIslands(): Promise<Island[]> {
       .order('order_index', { ascending: true });
 
     return islandsData.map((isl) => {
-      const islandTerritories: Territory[] = (territoriesData || [])
-        .filter((t) => t.island_id === isl.id)
-        .map((t, idx) => ({
+      const filtered = (territoriesData || []).filter((t) => t.island_id === isl.id);
+      const islandTerritories: Territory[] = filtered.map((t, idx) => {
+        const nextId = filtered[idx + 1]?.id || '';
+        return {
           id: t.id,
           name: t.title || t.topic || `Territory ${idx + 1}`,
           difficulty: (t.difficulty as 'Easy' | 'Medium' | 'Hard') || 'Easy',
           difficultyValue: t.difficulty === 'Hard' ? 3 : t.difficulty === 'Medium' ? 2 : 1,
           status: (idx === 0 ? 'available' : 'locked') as 'locked' | 'available' | 'in_progress' | 'captured',
-          connectedTerritoryIds: idx > 0 ? [(territoriesData || [])[idx - 1]?.id || ''] : [],
-          x: 20 + (idx % 3) * 30,
-          y: 25 + Math.floor(idx / 3) * 40,
-          problemId: t.problem_id || 'p1',
-        }));
+          connectedTerritoryIds: nextId ? [nextId] : [],
+          x: 15 + Math.min(75, idx * 18),
+          y: idx === 0 || idx === filtered.length - 1 ? 50 : idx % 2 === 1 ? 25 : 75,
+          problemId: t.problem_id || 'prob_two_sum',
+        };
+      });
 
       const total = islandTerritories.length || isl.total_territories || 5;
       const captured = islandTerritories.filter((t) => t.status === 'captured').length;
@@ -45,14 +47,15 @@ export async function fetchDbIslands(): Promise<Island[]> {
         id: isl.id,
         name: isl.name,
         description: isl.description || '',
-        icon: isl.id.includes('loop') ? '🔁' : isl.id.includes('array') ? '📦' : isl.id.includes('recursion') ? '🌀' : '🌴',
+        icon: isl.id.includes('loop') ? 'cached' : isl.id.includes('array') ? 'layers' : isl.id.includes('recursion') ? 'all_inclusive' : 'water_drop',
+        image: `/assets/islands/${isl.id}.png`,
         unlocked: isl.required_level <= 1,
         progress: `${captured}/${total}`,
         totalTerritories: total,
         capturedTerritories: captured,
         territories: islandTerritories,
-        bgColor: isl.bg_gradient || 'from-emerald-900/40 to-cyan-900/30',
-        accentColor: isl.color || 'emerald',
+        bgColor: isl.bg_gradient || 'from-emerald-950/80 to-cyan-950/80',
+        accentColor: isl.color || '#4edea3',
       };
     });
   } catch (err) {

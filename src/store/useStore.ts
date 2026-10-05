@@ -159,14 +159,34 @@ export const useStore = create<AppState>((set, get) => ({
       const updatedIslands = state.islands.map((isl) => {
         if (isl.id !== islandId) return isl;
         
-        const capturedTer = isl.territories.find((t) => t.id === territoryId);
-        const nextIdsToUnlock = capturedTer ? capturedTer.connectedTerritoryIds : [];
+        const capturedIdx = isl.territories.findIndex((t) => t.id === territoryId);
+        const capturedTer = isl.territories[capturedIdx];
+        
+        // Collect all IDs that should be unlocked
+        const nextIdsToUnlock = new Set<string>();
+        
+        // 1. Direct forward connections
+        if (capturedTer && capturedTer.connectedTerritoryIds) {
+          capturedTer.connectedTerritoryIds.forEach((id) => nextIdsToUnlock.add(id));
+        }
+        
+        // 2. Any territory that was connected to this territory
+        isl.territories.forEach((t) => {
+          if (t.connectedTerritoryIds && t.connectedTerritoryIds.includes(territoryId)) {
+            nextIdsToUnlock.add(t.id);
+          }
+        });
+        
+        // 3. Fallback to next sequential node in list
+        if (capturedIdx >= 0 && capturedIdx + 1 < isl.territories.length) {
+          nextIdsToUnlock.add(isl.territories[capturedIdx + 1].id);
+        }
 
         const updatedTerritories = isl.territories.map((ter) => {
           if (ter.id === territoryId) {
             return { ...ter, status: 'captured' as const, capturedByPlayerId: state.user.id };
           }
-          if (nextIdsToUnlock.includes(ter.id) && ter.status === 'locked') {
+          if (nextIdsToUnlock.has(ter.id) && ter.status === 'locked') {
             return { ...ter, status: 'available' as const };
           }
           return ter;
