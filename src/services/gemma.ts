@@ -2,55 +2,105 @@ import { AIFeedback, Course, Problem, UserProfile } from '../types';
 
 const env = (import.meta as any).env || {};
 const GEMMA_API_KEY = env.VITE_GEMMA_API_KEY || '';
+const OPENROUTER_API_KEY = env.VITE_OPENROUTER_API_KEY || '';
 
-export async function callGeminiApi(prompt: string, systemInstruction?: string): Promise<string> {
-  if (!GEMMA_API_KEY) {
-    throw new Error('AI is offline: VITE_GEMMA_API_KEY is not configured.');
+async function callOpenRouterApi(prompt: string, systemInstruction?: string): Promise<string> {
+  if (!OPENROUTER_API_KEY) {
+    throw new Error('OpenRouter API key is not configured.');
   }
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMMA_API_KEY}`;
-  
-  const body: any = {
-    contents: [
-      {
-        parts: [
-          {
-            text: prompt,
-          },
-        ],
-      },
-    ],
-  };
-
+  const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+  const messages: any[] = [];
   if (systemInstruction) {
-    body.systemInstruction = {
-      parts: [{ text: systemInstruction }],
-    };
+    messages.push({ role: 'system', content: systemInstruction });
   }
+  messages.push({ role: 'user', content: prompt });
 
-  try {
-    const response = await fetch(endpoint, {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      'HTTP-Referer': 'http://localhost:3000',
+      'X-Title': 'CodeConquer Gamified Platform',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.0-flash-001',
+      messages,
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    // Try secondary openrouter model if first has issues
+    const fallbackResponse = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        model: 'meta-llama/llama-3.3-70b-instruct',
+        messages,
+        temperature: 0.7,
+      }),
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.warn('AI API Error Response:', errText);
-      throw new Error(`AI is offline (HTTP ${response.status})`);
+    if (!fallbackResponse.ok) {
+      const err = await fallbackResponse.text();
+      console.warn('OpenRouter API failure:', err);
+      throw new Error(`OpenRouter API offline (${fallbackResponse.status})`);
     }
 
-    const json = await response.json();
-    const candidateText = json.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!candidateText) {
-      throw new Error('AI is offline: No response generated.');
+    const fallbackJson = await fallbackResponse.json();
+    return fallbackJson.choices?.[0]?.message?.content || '';
+  }
+
+  const json = await response.json();
+  const content = json.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('OpenRouter returned empty content.');
+  }
+  return content;
+}
+
+export async function callAI(prompt: string, systemInstruction?: string): Promise<string> {
+  // 1. Try Primary Google Gemini / Gemma API
+  if (GEMMA_API_KEY) {
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMMA_API_KEY}`;
+      const body: any = {
+        contents: [{ parts: [{ text: prompt }] }],
+      };
+      if (systemInstruction) {
+        body.systemInstruction = { parts: [{ text: systemInstruction }] };
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (response.ok) {
+        const json = await response.json();
+        const candidateText = json.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (candidateText) {
+          return candidateText;
+        }
+      } else {
+        console.warn('Primary Gemini API response not ok, falling back to OpenRouter...');
+      }
+    } catch (err) {
+      console.warn('Primary Gemini API error, attempting OpenRouter fallback...', err);
     }
-    return candidateText;
+  }
+
+  // 2. Fallback to OpenRouter API
+  try {
+    return await callOpenRouterApi(prompt, systemInstruction);
   } catch (err: any) {
-    console.warn('AI call failure:', err.message);
+    console.warn('All AI providers failed:', err.message);
     throw new Error('AI is offline');
   }
 }
@@ -83,7 +133,7 @@ Output ONLY valid JSON without markdown fences matching this exact schema:
 }`;
 
   try {
-    const raw = await callGeminiApi(prompt, 'You are an expert algorithms challenge designer for a gamified coding platform.');
+    const raw = await callAI(prompt, 'You are an expert algorithms challenge designer for a gamified coding platform.');
     const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleaned);
     return {
@@ -91,7 +141,6 @@ Output ONLY valid JSON without markdown fences matching this exact schema:
       id: `ai_gen_${Date.now()}`,
     };
   } catch (err: any) {
-    // If AI offline, throw explicit error
     throw new Error('AI is offline');
   }
 }
@@ -120,11 +169,10 @@ Return ONLY valid JSON matching this schema:
 }`;
 
   try {
-    const raw = await callGeminiApi(prompt, 'You are a code analysis and optimization engine.');
+    const raw = await callAI(prompt, 'You are a code analysis and optimization engine.');
     const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(cleaned);
   } catch (err) {
-    // Return offline notice if AI is unavailable
     return {
       summary: 'AI is offline. Unable to generate real-time feedback at this moment.',
       mistakes: ['AI is offline: Check internet connection or API status.'],
@@ -150,7 +198,7 @@ User Question: "${question}"
 Assistance Level Hint (1 = Socratic hint, 3 = code explanation). Provide a helpful concise answer formatted with markdown.`;
 
   try {
-    return await callGeminiApi(prompt, 'You are CodeConquer AI Mentor, an encouraging coding sensei.');
+    return await callAI(prompt, 'You are CodeConquer AI Mentor, an encouraging coding sensei.');
   } catch (err) {
     return 'AI is offline. Please check your network connection or API key configuration.';
   }
@@ -187,7 +235,7 @@ Return ONLY valid JSON:
 }`;
 
   try {
-    const raw = await callGeminiApi(prompt, 'You are an educational syllabus architect.');
+    const raw = await callAI(prompt, 'You are an educational syllabus architect.');
     const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleaned);
     return {
