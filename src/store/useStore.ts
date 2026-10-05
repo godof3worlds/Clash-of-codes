@@ -159,24 +159,43 @@ export const useStore = create<AppState>((set, get) => ({
       const updatedIslands = state.islands.map((isl) => {
         if (isl.id !== islandId) return isl;
         
+        const capturedTer = isl.territories.find((t) => t.id === territoryId);
+        const nextIdsToUnlock = capturedTer ? capturedTer.connectedTerritoryIds : [];
+
         const updatedTerritories = isl.territories.map((ter) => {
           if (ter.id === territoryId) {
             return { ...ter, status: 'captured' as const, capturedByPlayerId: state.user.id };
           }
-          if (ter.connectedTerritoryIds.includes(territoryId) && ter.status === 'locked') {
+          if (nextIdsToUnlock.includes(ter.id) && ter.status === 'locked') {
             return { ...ter, status: 'available' as const };
           }
           return ter;
         });
         
         const capturedSum = updatedTerritories.filter((t) => t.status === 'captured').length;
+        const isIslandComplete = capturedSum >= isl.totalTerritories;
+
         return {
           ...isl,
           capturedTerritories: capturedSum,
           progress: `${capturedSum}/${isl.totalTerritories}`,
           territories: updatedTerritories,
+          unlocked: isl.unlocked || isIslandComplete,
         };
       });
+
+      // If current island is completed, unlock the next island
+      const currentIsl = updatedIslands.find((i) => i.id === islandId);
+      if (currentIsl && currentIsl.capturedTerritories >= currentIsl.totalTerritories) {
+        const currentIdx = updatedIslands.findIndex((i) => i.id === islandId);
+        if (currentIdx >= 0 && currentIdx + 1 < updatedIslands.length) {
+          updatedIslands[currentIdx + 1].unlocked = true;
+          if (updatedIslands[currentIdx + 1].territories.length > 0) {
+            updatedIslands[currentIdx + 1].territories[0].status = 'available';
+          }
+          get().showToast(`🌴 Island Conquered! New Island "${updatedIslands[currentIdx + 1].name}" Unlocked!`);
+        }
+      }
       
       return { islands: updatedIslands };
     });

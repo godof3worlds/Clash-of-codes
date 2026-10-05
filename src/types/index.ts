@@ -41,6 +41,8 @@ export interface Territory {
   x: number; // SVG percentage
   y: number;
   problemId: string;
+  branchLevel?: number;
+  icon?: string;
 }
 
 export interface Island {
@@ -48,8 +50,9 @@ export interface Island {
   name: string;
   description: string;
   icon: string;
+  image?: string;
   unlocked: boolean;
-  progress: string; // e.g. "3/5"
+  progress: string; // e.g. "0/5"
   totalTerritories: number;
   capturedTerritories: number;
   territories: Territory[];

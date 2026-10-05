@@ -1,208 +1,615 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import Editor from '@monaco-editor/react';
+import confetti from 'canvas-confetti';
 import { useStore } from '../store/useStore';
-import { generateAIProblem } from '../services/gemma';
+import { executeCode } from '../services/jdoodle';
+import { analyzeCodeWithGemma, askAIMentor } from '../services/gemma';
+import { ExecutionResult, Problem, Territory } from '../types';
 
 export const IslandWorld: React.FC = () => {
-  const { islands, setActiveIsland, activeIslandId, setCurrentView, setActiveProblem, problems, showToast } = useStore();
-  const [selectedIsland, setSelectedIsland] = useState(activeIslandId);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const island = islands.find((i) => i.id === selectedIsland) || islands[0];
+  const {
+    islands, setActiveIsland, activeIslandId, captureTerritory,
+    problems, user, addXP, updateAdaptiveDifficulty, showToast,
+  } = useStore();
 
-  const handleTerritoryClick = (territoryId: string) => {
-    const territory = island.territories.find((t) => t.id === territoryId);
-    if (!territory || territory.status === 'locked') return;
+  const [selectedIslandId, setSelectedIslandId] = useState<string>(activeIslandId || 'python-shores');
+  const island = islands.find((i) => i.id === selectedIslandId) || islands[0];
+
+  // Conquest Modal State
+  const [activeTerritory, setActiveTerritory] = useState<Territory | null>(null);
+  const [modalProblem, setModalProblem] = useState<Problem | null>(null);
+  const [modalCode, setModalCode] = useState<string>('');
+  const [modalLang, setModalLang] = useState<string>('Python');
+  const [isRunning, setIsRunning] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [execResult, setExecResult] = useState<ExecutionResult | null>(null);
+  const [modalTab, setModalTab] = useState<'problem' | 'results' | 'mentor'>('problem');
+  const [mentorHint, setMentorHint] = useState<string | null>(null);
+  const [isAskingMentor, setIsAskingMentor] = useState(false);
+  const [conquestSuccess, setConquestSuccess] = useState(false);
+
+  // Open the conquest coding window for a node
+  const handleOpenConquest = (territory: Territory) => {
+    if (territory.status === 'locked') {
+      showToast('🔒 This territory is locked. Conquer prerequisite nodes on the branching path first!');
+      return;
+    }
     const prob = problems.find((p) => p.id === territory.problemId) || problems[0];
-    if (prob) {
-      setActiveProblem(prob);
-      setActiveIsland(island.id);
-      setCurrentView('practice-lab');
-    }
+    setActiveTerritory(territory);
+    setModalProblem(prob);
+    setModalLang('Python');
+    setModalCode(prob.starterCode['Python'] || prob.starterCode['JavaScript'] || '# Write your solution\n');
+    setExecResult(null);
+    setMentorHint(null);
+    setConquestSuccess(false);
+    setModalTab('problem');
   };
 
-  const handleGenerateTerritoryChallenge = async (territoryId: string) => {
-    const territory = island.territories.find((t) => t.id === territoryId);
-    if (!territory) return;
-    setIsGenerating(true);
-    try {
-      const newProb = await generateAIProblem(
-        island.name.replace(' Shores', '').replace(' Lagoon', '').replace(' Archipelago', '').replace(' Atoll', ''),
-        territory.difficulty,
-        'Python'
-      );
-      setActiveProblem(newProb);
-      setActiveIsland(island.id);
-      showToast(`⚔️ AI generated new battle kata: "${newProb.title}"!`);
-      setCurrentView('practice-lab');
-    } catch (err) {
-      showToast('⚠️ AI is offline. Launching standard territory kata.');
-      handleTerritoryClick(territoryId);
-    } finally {
-      setIsGenerating(false);
-    }
+  const handleCloseModal = () => {
+    setActiveTerritory(null);
+    setModalProblem(null);
   };
 
-  const statusColor = (status: string) => {
-    switch (status) {
-      case 'captured': return 'bg-tertiary shadow-[0_0_12px_rgba(78,222,163,0.5)]';
-      case 'available': return 'bg-primary animate-pulse shadow-[0_0_12px_rgba(76,215,246,0.5)]';
-      case 'in_progress': return 'bg-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.5)]';
-      default: return 'bg-surface-container-highest opacity-50';
+  const handleRunCode = useCallback(async () => {
+    if (!modalProblem) return;
+    setIsRunning(true);
+    setModalTab('results');
+    const res = await executeCode(
+      modalCode,
+      modalLang,
+      modalProblem.testCases.filter((t) => !t.isSecret)
+    );
+    setExecResult(res);
+    setIsRunning(false);
+  }, [modalCode, modalLang, modalProblem]);
+
+  const handleSubmitCode = useCallback(async () => {
+    if (!modalProblem || !activeTerritory) return;
+    setIsSubmitting(true);
+    setModalTab('results');
+    const res = await executeCode(modalCode, modalLang, modalProblem.testCases);
+    setExecResult(res);
+
+    if (res.passed) {
+      // Victory celebration
+      try {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
+        });
+      } catch (e) {}
+
+      addXP(modalProblem.points);
+      captureTerritory(island.id, activeTerritory.id);
+      updateAdaptiveDifficulty(true);
+      setConquestSuccess(true);
+      showToast(`🎉 Victory! Conquered "${activeTerritory.name}" (+${modalProblem.points} XP)!`);
+    } else {
+      updateAdaptiveDifficulty(false);
+      showToast('⚠️ Solution did not pass all tests. Revise and retry!');
     }
+    setIsSubmitting(false);
+  }, [modalProblem, activeTerritory, modalCode, modalLang, island.id, addXP, captureTerritory, updateAdaptiveDifficulty, showToast]);
+
+  const handleAskMentorHint = async () => {
+    if (!modalProblem) return;
+    setIsAskingMentor(true);
+    setModalTab('mentor');
+    const hint = await askAIMentor(
+      `Give me a gentle hint on how to approach the "${modalProblem.title}" problem without giving away full code.`,
+      user,
+      1
+    );
+    setMentorHint(hint);
+    setIsAskingMentor(false);
   };
 
-  const statusLabel = (status: string) => {
-    switch (status) {
-      case 'captured': return 'Captured';
-      case 'available': return 'Available';
-      case 'in_progress': return 'In Progress';
-      default: return 'Locked';
+  const handleNextUnlocked = () => {
+    // Find next available unlocked territory on this island
+    const nextTer = island.territories.find((t) => t.status === 'available' && t.id !== activeTerritory?.id);
+    if (nextTer) {
+      handleOpenConquest(nextTer);
+    } else {
+      handleCloseModal();
+      showToast('🌟 All currently unlocked territories completed! Check your map progress.');
     }
   };
 
   return (
     <div className="flex flex-col space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Island Biome Selector Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-surface-container rounded-2xl p-4 shadow-xl border border-surface-container-high/50">
         <div>
-          <h1 className="font-display text-2xl font-bold text-on-surface">Island World</h1>
-          <p className="font-sans text-sm text-on-surface-variant mt-1">Explore islands, conquer territories, and generate AI battle challenges.</p>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[11px] text-tertiary uppercase tracking-wider">Conquest World Map</span>
+            <span className="px-2 py-0.5 rounded-full bg-primary/20 font-mono text-[10px] text-primary font-bold">
+              Branching Skill Tree
+            </span>
+          </div>
+          <h1 className="font-display text-2xl font-bold text-on-surface mt-0.5">{island.name}</h1>
+          <p className="font-sans text-xs text-on-surface-variant max-w-xl">{island.description}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <select
-            value={selectedIsland}
-            onChange={(e) => setSelectedIsland(e.target.value)}
-            className="bg-surface-container-high border border-surface-container-highest rounded-xl px-3 py-2 text-sm text-on-surface font-sans focus:outline-none focus:border-primary"
-          >
-            {islands.map((i) => (
-              <option key={i.id} value={i.id}>{i.name} {!i.unlocked ? '🔒' : ''}</option>
-            ))}
-          </select>
+
+        {/* Islands Carousel / Dropdown */}
+        <div className="flex items-center gap-2 overflow-x-auto py-1">
+          {islands.map((isl) => (
+            <button
+              key={isl.id}
+              onClick={() => {
+                setSelectedIslandId(isl.id);
+                setActiveIsland(isl.id);
+              }}
+              className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl transition-all border ${
+                selectedIslandId === isl.id
+                  ? 'bg-surface-container-high border-primary text-primary shadow-[0_0_16px_rgba(76,215,246,0.25)]'
+                  : 'bg-surface-container-lowest/60 border-surface-container-high/40 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'
+              }`}
+            >
+              {isl.image ? (
+                <img src={isl.image} alt={isl.name} className="w-6 h-6 rounded-md object-cover" />
+              ) : (
+                <span className="material-symbols-outlined text-[18px]">{isl.icon}</span>
+              )}
+              <span className="font-sans text-xs font-medium whitespace-nowrap">{isl.name}</span>
+              <span className="font-mono text-[10px] opacity-70">({isl.progress})</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Island Map */}
-      <div className="relative bg-surface-container rounded-2xl overflow-hidden shadow-xl border border-surface-container-high/50 min-h-[500px]">
-        {/* Background gradient */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${island.bgColor} opacity-60`} />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(15,19,29,0.8))]" />
+      {/* Main Interactive Branching Map Canvas */}
+      <div className="relative bg-surface-container rounded-3xl overflow-hidden shadow-2xl border border-surface-container-high/60 min-h-[560px]">
+        {/* Island Biome Graphics Backdrop */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {island.image && (
+            <div className="absolute top-4 right-6 w-72 h-72 opacity-25 filter blur-[1px] transform rotate-3">
+              <img src={island.image} alt="Island Sprite" className="w-full h-full object-contain pixelated" />
+            </div>
+          )}
+          <div className={`absolute inset-0 bg-gradient-to-br ${island.bgColor} opacity-70`} />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(15,19,29,0.85))]" />
+        </div>
 
-        {/* SVG Territory Map */}
-        <svg className="relative w-full h-[500px]" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
-          {/* Connection Lines */}
-          {island.territories.map((ter) =>
-            ter.connectedTerritoryIds.map((connId) => {
-              const conn = island.territories.find((t) => t.id === connId);
-              if (!conn) return null;
-              if (ter.id > connId) return null;
+        {/* Grid Pattern overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none" />
+
+        {/* SVG Skill Tree & Connectors */}
+        <svg className="relative w-full h-[560px]" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="capturedLine" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#4edea3" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#4cd7f6" stopOpacity="0.9" />
+            </linearGradient>
+            <linearGradient id="activeLine" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#4cd7f6" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="#818cf8" stopOpacity="0.5" />
+            </linearGradient>
+            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.5" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
+
+          {/* Render Branching Bezier Connectors */}
+          {island.territories.map((src) =>
+            src.connectedTerritoryIds.map((targetId) => {
+              const target = island.territories.find((t) => t.id === targetId);
+              if (!target) return null;
+
+              const isCapturedPath = src.status === 'captured' && target.status === 'captured';
+              const isAvailablePath = src.status === 'captured' && (target.status === 'available' || target.status === 'in_progress');
+
+              // Control points for smooth organic curve
+              const dx = target.x - src.x;
+              const cp1x = src.x + dx * 0.5;
+              const cp1y = src.y;
+              const cp2x = src.x + dx * 0.5;
+              const cp2y = target.y;
+              const pathD = `M ${src.x} ${src.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${target.x} ${target.y}`;
+
               return (
-                <line
-                  key={`${ter.id}-${connId}`}
-                  x1={ter.x} y1={ter.y}
-                  x2={conn.x} y2={conn.y}
-                  stroke={ter.status === 'captured' && conn.status === 'captured' ? '#4edea3' : 'rgba(188,201,205,0.2)'}
-                  strokeWidth="0.4"
-                  strokeDasharray={ter.status === 'locked' || conn.status === 'locked' ? '1,1' : 'none'}
-                />
+                <g key={`${src.id}-${target.id}`}>
+                  {/* Glowing halo for active/captured branch */}
+                  {(isCapturedPath || isAvailablePath) && (
+                    <path
+                      d={pathD}
+                      fill="none"
+                      stroke={isCapturedPath ? '#4edea3' : '#4cd7f6'}
+                      strokeWidth="1.2"
+                      opacity="0.3"
+                      filter="url(#glow)"
+                    />
+                  )}
+                  {/* Core connector line */}
+                  <path
+                    d={pathD}
+                    fill="none"
+                    stroke={
+                      isCapturedPath
+                        ? 'url(#capturedLine)'
+                        : isAvailablePath
+                        ? 'url(#activeLine)'
+                        : 'rgba(255, 255, 255, 0.12)'
+                    }
+                    strokeWidth={isCapturedPath ? '0.8' : isAvailablePath ? '0.6' : '0.4'}
+                    strokeDasharray={isCapturedPath ? 'none' : isAvailablePath ? '1.5, 1' : '1, 1.5'}
+                    className={isAvailablePath ? 'animate-pulse' : ''}
+                  />
+                </g>
               );
             })
           )}
 
-          {/* Territory Nodes */}
-          {island.territories.map((ter) => (
-            <g
-              key={ter.id}
-              onClick={() => handleTerritoryClick(ter.id)}
-              className={`${ter.status !== 'locked' ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-            >
-              <circle
-                cx={ter.x} cy={ter.y} r="4.5"
-                className={`${statusColor(ter.status)} transition-all duration-300`}
-                fill="currentColor"
-                opacity={ter.status === 'locked' ? 0.3 : 0.9}
-              />
-              <circle
-                cx={ter.x} cy={ter.y} r="3"
-                fill={ter.status === 'captured' ? '#4edea3' : ter.status === 'available' ? '#4cd7f6' : ter.status === 'in_progress' ? '#f59e0b' : '#313540'}
-              />
-              {ter.status === 'locked' && (
-                <text x={ter.x} y={ter.y + 1.2} textAnchor="middle" fill="#bcc9cd" fontSize="3" opacity="0.5">🔒</text>
-              )}
-              <text x={ter.x} y={ter.y + 8} textAnchor="middle" fill="#dfe2f1" fontSize="2.2" fontFamily="Plus Jakarta Sans">
-                {ter.name.split(': ')[1] || ter.name}
-              </text>
-            </g>
-          ))}
+          {/* Render Branching Tree Nodes */}
+          {island.territories.map((node) => {
+            const isCaptured = node.status === 'captured';
+            const isAvailable = node.status === 'available';
+            const isLocked = node.status === 'locked';
+
+            return (
+              <g
+                key={node.id}
+                onClick={() => handleOpenConquest(node)}
+                className="cursor-pointer group"
+                style={{ transformOrigin: `${node.x}% ${node.y}%` }}
+              >
+                {/* Pulsing Aura for Available Nodes */}
+                {isAvailable && (
+                  <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r="5.5"
+                    fill="none"
+                    stroke="#4cd7f6"
+                    strokeWidth="0.5"
+                    opacity="0.6"
+                    className="animate-ping"
+                  />
+                )}
+
+                {/* Outer Ring */}
+                <circle
+                  cx={node.x}
+                  cy={node.y}
+                  r="4.2"
+                  fill={isCaptured ? '#4edea3' : isAvailable ? '#4cd7f6' : '#232836'}
+                  opacity={isLocked ? 0.4 : 0.8}
+                  className="transition-all duration-300 group-hover:scale-125"
+                />
+
+                {/* Inner Core */}
+                <circle
+                  cx={node.x}
+                  cy={node.y}
+                  r="3.2"
+                  fill={
+                    isCaptured
+                      ? '#064e3b'
+                      : isAvailable
+                      ? '#0c4a6e'
+                      : '#131722'
+                  }
+                  stroke={
+                    isCaptured
+                      ? '#4edea3'
+                      : isAvailable
+                      ? '#4cd7f6'
+                      : '#374151'
+                  }
+                  strokeWidth="0.4"
+                />
+
+                {/* Node Status Icon / Text inside SVG */}
+                <text
+                  x={node.x}
+                  y={node.y + 1}
+                  textAnchor="middle"
+                  fontSize="2"
+                  fill={isCaptured ? '#4edea3' : isAvailable ? '#4cd7f6' : '#9ca3af'}
+                  fontWeight="bold"
+                >
+                  {isCaptured ? '✓' : isLocked ? '🔒' : '⚔️'}
+                </text>
+
+                {/* Territory Label Badge */}
+                <g transform={`translate(${node.x}, ${node.y + 6.5})`}>
+                  <rect
+                    x="-12"
+                    y="-2.5"
+                    width="24"
+                    height="5"
+                    rx="1.5"
+                    fill="#0f131d"
+                    fillOpacity="0.85"
+                    stroke={isCaptured ? '#4edea3' : isAvailable ? '#4cd7f6' : '#374151'}
+                    strokeWidth="0.2"
+                  />
+                  <text
+                    x="0"
+                    y="0.8"
+                    textAnchor="middle"
+                    fill="#f3f4f6"
+                    fontSize="1.6"
+                    fontWeight="600"
+                    fontFamily="Plus Jakarta Sans"
+                  >
+                    {node.name.length > 18 ? node.name.slice(0, 16) + '...' : node.name}
+                  </text>
+                </g>
+              </g>
+            );
+          })}
         </svg>
 
-        {/* Legend */}
-        <div className="absolute bottom-4 left-4 flex items-center gap-4">
-          {['captured', 'available', 'in_progress', 'locked'].map((status) => (
-            <div key={status} className="flex items-center gap-1.5">
-              <div className={`w-3 h-3 rounded-full ${
-                status === 'captured' ? 'bg-tertiary' :
-                status === 'available' ? 'bg-primary' :
-                status === 'in_progress' ? 'bg-amber-400' : 'bg-surface-container-highest'
-              }`} />
-              <span className="font-mono text-[10px] text-on-surface-variant">{statusLabel(status)}</span>
+        {/* Floating Controls & Legend */}
+        <div className="absolute bottom-4 left-4 right-4 flex flex-wrap items-center justify-between gap-3 bg-surface-container-lowest/80 backdrop-blur-md p-3 rounded-2xl border border-surface-container-high/40">
+          <div className="flex items-center gap-4 text-xs font-sans">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-tertiary shadow-[0_0_8px_rgba(78,222,163,0.6)]" />
+              <span className="text-on-surface font-medium">Captured</span>
             </div>
-          ))}
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-primary shadow-[0_0_8px_rgba(76,215,246,0.6)] animate-pulse" />
+              <span className="text-on-surface font-medium">Available (Click to Code)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-gray-600 opacity-60" />
+              <span className="text-on-surface-variant font-medium">Locked Branch</span>
+            </div>
+          </div>
+
+          <div className="font-mono text-xs text-primary">
+            Progress: {island.capturedTerritories} / {island.totalTerritories} territories conquered
+          </div>
         </div>
       </div>
 
-      {/* Territory Details Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {island.territories.map((ter) => {
-          const prob = problems.find((p) => p.id === ter.problemId);
-          return (
-            <div
-              key={ter.id}
-              className={`bg-surface-container rounded-xl p-4 shadow-lg border transition-all duration-200 ${
-                ter.status === 'available' ? 'border-primary/30 hover:glow-primary' :
-                ter.status === 'captured' ? 'border-tertiary/20 opacity-80' :
-                ter.status === 'in_progress' ? 'border-amber-400/30' :
-                'border-surface-container-high/30 opacity-50'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-display text-sm font-bold text-on-surface">{ter.name.split(': ')[1] || ter.name}</span>
-                <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-bold ${
-                  ter.difficulty === 'Easy' ? 'bg-tertiary/20 text-tertiary' :
-                  ter.difficulty === 'Medium' ? 'bg-amber-400/20 text-amber-400' :
-                  'bg-error/20 text-error'
-                }`}>{ter.difficulty}</span>
-              </div>
-              {prob && <p className="font-sans text-xs text-on-surface-variant">Default: {prob.title}</p>}
-              <div className="flex items-center justify-between mt-3">
-                <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] ${
-                  ter.status === 'captured' ? 'bg-tertiary/20 text-tertiary' :
-                  ter.status === 'available' ? 'bg-primary/20 text-primary' :
-                  ter.status === 'in_progress' ? 'bg-amber-400/20 text-amber-400' :
-                  'bg-surface-container-highest text-on-surface-variant'
-                }`}>{statusLabel(ter.status)}</span>
-                
-                {ter.status !== 'locked' && (
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => handleGenerateTerritoryChallenge(ter.id)}
-                      disabled={isGenerating}
-                      className="px-2 py-1 bg-secondary/20 hover:bg-secondary/30 text-secondary rounded-lg font-mono text-[10px] font-bold transition-all disabled:opacity-50"
-                      title="Generate dynamic AI question for this node"
-                    >
-                      ⚡ AI Battle
-                    </button>
-                    <button
-                      onClick={() => handleTerritoryClick(ter.id)}
-                      className="px-2.5 py-1 bg-primary text-surface-container-lowest rounded-lg font-sans text-xs font-bold hover:shadow-md transition-all"
-                    >
-                      Enter
-                    </button>
+      {/* SEPARATE CONQUEST CODING WINDOW (OVERLAY WORKSPACE) */}
+      {activeTerritory && modalProblem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-6xl h-[90vh] bg-surface-container rounded-2xl shadow-2xl border border-primary/40 flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 bg-surface-container-high border-b border-surface-container-highest">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary font-bold">
+                  ⚔️
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[11px] text-tertiary font-bold uppercase">{island.name}</span>
+                    <span className="text-on-surface-variant text-xs">•</span>
+                    <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-bold ${
+                      activeTerritory.difficulty === 'Easy' ? 'bg-tertiary/20 text-tertiary' :
+                      activeTerritory.difficulty === 'Medium' ? 'bg-amber-400/20 text-amber-400' :
+                      'bg-error/20 text-error'
+                    }`}>{activeTerritory.difficulty}</span>
                   </div>
-                )}
+                  <h2 className="font-display text-lg font-bold text-on-surface">{activeTerritory.name}: {modalProblem.title}</h2>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <select
+                  value={modalLang}
+                  onChange={(e) => {
+                    const l = e.target.value;
+                    setModalLang(l);
+                    setModalCode(modalProblem.starterCode[l] || modalProblem.starterCode['Python'] || '');
+                  }}
+                  className="bg-surface-container-lowest border border-surface-container-highest rounded-xl px-3 py-1.5 text-xs text-on-surface font-mono focus:outline-none focus:border-primary"
+                >
+                  <option value="Python">Python 3</option>
+                  <option value="JavaScript">JavaScript</option>
+                </select>
+
+                <button
+                  onClick={handleAskMentorHint}
+                  disabled={isAskingMentor}
+                  className="px-3 py-1.5 rounded-xl bg-secondary/15 border border-secondary/40 text-secondary font-sans text-xs font-bold hover:bg-secondary/25 transition-all flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">psychology</span>
+                  {isAskingMentor ? 'Thinking...' : 'AI Hint'}
+                </button>
+
+                <button
+                  onClick={handleRunCode}
+                  disabled={isRunning}
+                  className="px-4 py-1.5 rounded-xl bg-surface-container-lowest border border-primary/40 text-primary font-sans text-xs font-bold hover:bg-surface-container-high transition-all flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">play_arrow</span>
+                  {isRunning ? 'Running...' : 'Run'}
+                </button>
+
+                <button
+                  onClick={handleSubmitCode}
+                  disabled={isSubmitting}
+                  className="px-5 py-1.5 rounded-xl bg-gradient-to-r from-primary-container to-primary text-surface-container-lowest font-sans text-xs font-bold hover:shadow-[0_0_16px_rgba(76,215,246,0.4)] transition-all flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                  {isSubmitting ? 'Conquering...' : 'Submit & Conquer'}
+                </button>
+
+                <button
+                  onClick={handleCloseModal}
+                  className="w-8 h-8 rounded-xl bg-surface-container-lowest hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-all ml-2"
+                >
+                  ✕
+                </button>
               </div>
             </div>
-          );
-        })}
-      </div>
+
+            {/* Modal Body: Split 50/50 Problem & Monaco Editor */}
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden">
+              {/* Left Column: Problem Tabs */}
+              <div className="lg:col-span-5 border-r border-surface-container-high/60 flex flex-col bg-surface-container-lowest/40 overflow-hidden">
+                <div className="flex border-b border-surface-container-high/60">
+                  <button
+                    onClick={() => setModalTab('problem')}
+                    className={`flex-1 py-3 font-sans text-xs font-bold transition-all border-b-2 ${
+                      modalTab === 'problem' ? 'border-primary text-primary bg-surface-container/50' : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    Mission Brief
+                  </button>
+                  <button
+                    onClick={() => setModalTab('results')}
+                    className={`flex-1 py-3 font-sans text-xs font-bold transition-all border-b-2 ${
+                      modalTab === 'results' ? 'border-tertiary text-tertiary bg-surface-container/50' : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    Test Output
+                  </button>
+                  <button
+                    onClick={() => setModalTab('mentor')}
+                    className={`flex-1 py-3 font-sans text-xs font-bold transition-all border-b-2 ${
+                      modalTab === 'mentor' ? 'border-secondary text-secondary bg-surface-container/50' : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    AI Sensei
+                  </button>
+                </div>
+
+                <div className="flex-1 p-6 overflow-y-auto space-y-4">
+                  {conquestSuccess && (
+                    <div className="p-4 rounded-xl bg-tertiary/15 border border-tertiary/40 glow-tertiary animate-bounce">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">🏆</span>
+                          <div>
+                            <h4 className="font-display text-sm font-bold text-tertiary">Territory Conquered!</h4>
+                            <p className="font-sans text-xs text-on-surface-variant">Connected branches are now unlocked.</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleNextUnlocked}
+                          className="px-3 py-1.5 rounded-lg bg-tertiary text-surface-container-lowest font-sans text-xs font-bold hover:shadow-lg transition-all"
+                        >
+                          Conquer Next ➔
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {modalTab === 'problem' && (
+                    <div className="space-y-4 font-sans text-sm text-on-surface leading-relaxed">
+                      <div className="whitespace-pre-line bg-surface-container/30 p-4 rounded-xl border border-surface-container-high/30">
+                        {modalProblem.description}
+                      </div>
+
+                      {modalProblem.examples.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="font-mono text-xs uppercase tracking-wider text-on-surface-variant">Example Cases</h4>
+                          {modalProblem.examples.map((ex, i) => (
+                            <div key={i} className="p-3 bg-surface-container-lowest rounded-xl font-mono text-xs border border-surface-container-high/40">
+                              <div><span className="text-on-surface-variant">Input: </span><span className="text-primary">{ex.input}</span></div>
+                              <div><span className="text-on-surface-variant">Output: </span><span className="text-tertiary">{ex.output}</span></div>
+                              {ex.explanation && <div className="text-[11px] text-on-surface-variant/80 font-sans mt-1">{ex.explanation}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="space-y-1">
+                        <h4 className="font-mono text-xs uppercase tracking-wider text-on-surface-variant">Constraints</h4>
+                        <ul className="list-disc list-inside space-y-1 font-mono text-xs text-on-surface-variant">
+                          {modalProblem.constraints.map((c, i) => <li key={i}>{c}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {modalTab === 'results' && (
+                    <div className="space-y-4">
+                      {!execResult ? (
+                        <div className="text-center py-16 text-on-surface-variant">
+                          <span className="material-symbols-outlined text-4xl mb-2">code</span>
+                          <p className="font-sans text-xs">Run or Submit to test your code against battle test cases.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className={`p-4 rounded-xl border flex items-center justify-between ${
+                            execResult.passed ? 'bg-tertiary/15 border-tertiary/40' : 'bg-error/15 border-error/40'
+                          }`}>
+                            <div>
+                              <h4 className={`font-display text-sm font-bold ${execResult.passed ? 'text-tertiary' : 'text-error'}`}>
+                                {execResult.passed ? '✓ All Test Cases Conquered!' : '✗ Tests Failed'}
+                              </h4>
+                              <span className="font-mono text-xs text-on-surface-variant">
+                                {execResult.passedCount} / {execResult.totalTests} passed
+                              </span>
+                            </div>
+                            <span className="font-mono text-xs text-on-surface-variant">{execResult.executionTimeMs}ms</span>
+                          </div>
+
+                          {execResult.testDetails.map((td, i) => (
+                            <div key={i} className="p-3 bg-surface-container-lowest rounded-xl border border-surface-container-high/40 font-mono text-xs space-y-1">
+                              <div className="flex justify-between">
+                                <span className="font-bold text-on-surface">Test #{i + 1}</span>
+                                <span className={td.passed ? 'text-tertiary' : 'text-error'}>{td.passed ? 'PASS' : 'FAIL'}</span>
+                              </div>
+                              <div><span className="text-on-surface-variant">Input: </span>{td.input}</div>
+                              <div><span className="text-on-surface-variant">Expected: </span>{td.expected}</div>
+                              <div><span className="text-on-surface-variant">Actual: </span><span className={td.passed ? 'text-tertiary' : 'text-error'}>{td.actual}</span></div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {modalTab === 'mentor' && (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-secondary/10 border border-secondary/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="material-symbols-outlined text-secondary">psychology</span>
+                          <h4 className="font-display text-sm font-bold text-on-surface">AI Mentor Sensei</h4>
+                        </div>
+                        <p className="font-sans text-xs text-on-surface leading-relaxed whitespace-pre-line">
+                          {mentorHint || 'Need guidance? Click "AI Hint" above for a Socratic hint tailored to your battle node!'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Column: Full Monaco Code Editor */}
+              <div className="lg:col-span-7 flex flex-col bg-surface-container overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2 bg-surface-container-high border-b border-surface-container-highest text-xs font-mono text-on-surface-variant">
+                  <span>solution.{modalLang === 'Python' ? 'py' : 'js'}</span>
+                  <button
+                    onClick={() => setModalCode(modalProblem.starterCode[modalLang] || '')}
+                    className="hover:text-primary transition-colors flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">restart_alt</span>
+                    Reset Starter Code
+                  </button>
+                </div>
+                <div className="flex-1 min-h-[300px]">
+                  <Editor
+                    height="100%"
+                    language={modalLang.toLowerCase() === 'python' ? 'python' : 'javascript'}
+                    value={modalCode}
+                    onChange={(v) => setModalCode(v || '')}
+                    theme="vs-dark"
+                    options={{
+                      fontSize: 14,
+                      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                      minimap: { enabled: false },
+                      scrollBeyondLastLine: false,
+                      padding: { top: 12, bottom: 12 },
+                      tabSize: 4,
+                      automaticLayout: true,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
