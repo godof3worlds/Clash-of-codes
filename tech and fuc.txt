@@ -1,0 +1,2717 @@
+# Final Technical Stack & Complete Functional Architecture
+
+## 1. Project Overview
+
+The project is an **AI-powered, adaptive, gamified coding-learning platform with real-time multiplayer coding competitions**.
+
+The platform combines:
+
+* AI-generated coding problems
+* Adaptive difficulty
+* Online code execution
+* AI-powered code analysis
+* Personalized AI mentoring
+* AI-generated learning courses
+* Web-assisted documentation
+* Gamified progression
+* 2D interactive island maps
+* Real-time multiplayer Clash rooms
+* Territory/pathway capture
+* Leaderboards
+* Badges
+* Streaks
+* XP
+* Learning analytics
+
+The core learning loop is:
+
+```text
+LEARN
+  ↓
+PRACTICE
+  ↓
+CLASH
+  ↓
+CODE
+  ↓
+EXECUTE
+  ↓
+SOLVE
+  ↓
+CAPTURE TERRITORY
+  ↓
+AI FEEDBACK
+  ↓
+ADAPT DIFFICULTY
+  ↓
+IMPROVE
+```
+
+The central design principle is:
+
+> **Gamification creates engagement, multiplayer creates competition, and AI creates personalization — but learning remains the primary objective.**
+
+---
+
+# 2. Core Product Structure
+
+The application is divided into separate major experiences.
+
+```text
+                    APPLICATION
+                         │
+       ┌─────────────────┼──────────────────┐
+       │                 │                  │
+       ▼                 ▼                  ▼
+   DASHBOARD          PRACTICE           CLASH
+       │                 │                  │
+       │                 │           Multiplayer Rooms
+       │                 │                  │
+       │                 │           2D Island Maps
+       │                 │                  │
+       ▼                 ▼                  ▼
+  AI MENTOR        AI FEEDBACK        REAL-TIME RACE
+       │
+       ▼
+ COURSE GENERATOR
+       │
+       ▼
+ PERSONALIZED LEARNING
+```
+
+---
+
+# 3. Recommended Technology Stack
+
+| Layer           | Technology           | Purpose                                  |
+| --------------- | -------------------- | ---------------------------------------- |
+| Frontend        | React + TypeScript   | Main application                         |
+| Build           | Vite                 | Development/build system                 |
+| Styling         | Tailwind CSS         | UI styling                               |
+| UI Components   | shadcn/ui            | Accessible reusable components           |
+| Animation       | Framer Motion        | UI/game animations                       |
+| 2D Map          | SVG / Canvas         | Interactive island battlefield           |
+| Code Editor     | Monaco Editor        | Browser coding environment               |
+| Backend         | Node.js + TypeScript | Secure application server                |
+| API             | Express.js           | Backend REST API                         |
+| Database        | Supabase PostgreSQL  | Persistent application data              |
+| Authentication  | Supabase Auth        | User accounts                            |
+| Authorization   | Supabase RLS         | Data security                            |
+| Realtime        | Supabase Realtime    | Multiplayer synchronization              |
+| AI              | Gemma                | Generation, analysis and personalization |
+| Code Execution  | JDoodle API          | Remote code execution                    |
+| Validation      | Zod                  | Input/AI output validation               |
+| Server State    | TanStack Query       | API state/caching                        |
+| Client State    | Zustand              | Local UI/game state                      |
+| Forms           | React Hook Form      | Form handling                            |
+| Analytics UI    | Recharts             | Progress visualization                   |
+| Testing         | Vitest               | Unit/integration tests                   |
+| E2E Testing     | Playwright           | Full application testing                 |
+| Version Control | Git/GitHub           | Source control                           |
+| Secrets         | `.env`               | Environment configuration                |
+
+---
+
+# 4. Frontend
+
+## React + TypeScript
+
+React handles the entire user-facing application.
+
+Major frontend sections:
+
+```text
+/pages
+    Dashboard
+    Practice
+    Clash
+    Mentor
+    Courses
+    Leaderboard
+    Profile
+    Settings
+```
+
+Feature modules:
+
+```text
+/features
+    authentication
+    dashboard
+    islands
+    clash
+    multiplayer
+    practice
+    code-editor
+    ai-feedback
+    mentor
+    courses
+    badges
+    leaderboard
+    analytics
+```
+
+TypeScript should define shared types for:
+
+* Users
+* Problems
+* Attempts
+* Rooms
+* Players
+* Islands
+* Territories
+* Matches
+* Scores
+* Badges
+* Courses
+* AI responses
+
+---
+
+# 5. Vite
+
+Vite provides:
+
+* Development server
+* Fast hot reload
+* Production builds
+* TypeScript integration
+* Frontend environment configuration
+
+No private secrets should be exposed through frontend environment variables.
+
+---
+
+# 6. Tailwind CSS
+
+Tailwind is used for the application's visual system.
+
+The design should be:
+
+* Bright
+* Colorful
+* Futuristic
+* Game-inspired
+* Responsive
+* Accessible
+
+The UI can use:
+
+* Bright island colors
+* Player colors
+* Territory indicators
+* Progress bars
+* XP animations
+* Achievement effects
+* Status indicators
+
+The interface should remain readable and avoid excessive visual effects.
+
+---
+
+# 7. shadcn/ui
+
+Used for reusable interface components:
+
+* Buttons
+* Cards
+* Dialogs
+* Tabs
+* Dropdowns
+* Tooltips
+* Toasts
+* Forms
+* Navigation
+* Modals
+* Progress indicators
+
+---
+
+# 8. Framer Motion
+
+Used for meaningful animations:
+
+### Island Capture
+
+```text
+Territory changes
+      ↓
+Animated capture effect
+      ↓
+Player progress updates
+```
+
+### Player Movement
+
+Player markers can smoothly move between connected map regions.
+
+### Achievement
+
+Badge/XP animations appear when rewards are earned.
+
+Animations must respect reduced-motion accessibility preferences.
+
+---
+
+# 9. 2D Island System
+
+The island is **not a linear list of challenges**.
+
+Each island is a **2D playable territory** containing interconnected regions and pathways.
+
+Example:
+
+```text
+                 ┌─────────────┐
+                 │  Territory  │
+                 │      A      │
+                 └──────┬──────┘
+                        │
+              ┌─────────┴─────────┐
+              │                   │
+        ┌─────▼─────┐       ┌─────▼─────┐
+        │ Territory │       │ Territory │
+        │     B     │───────│     C     │
+        └─────┬─────┘       └─────┬─────┘
+              │                   │
+              └─────────┬─────────┘
+                        │
+                 ┌──────▼──────┐
+                 │   Fortress  │
+                 │     /       │
+                 │   Goal      │
+                 └─────────────┘
+```
+
+The actual map can contain:
+
+* Multiple territories
+* Branching paths
+* Shortcuts
+* Intersections
+* Strategic regions
+* Central objectives
+* Starting areas
+* Final objectives
+
+---
+
+# 10. Territory Capture
+
+A player does not simply "complete Island 1 and move to Island 2."
+
+Instead, a player captures **areas inside an island**.
+
+A territory can represent a coding challenge.
+
+For example:
+
+```text
+             A
+            / \
+           B---C
+          /     \
+         D       E
+          \     /
+           F---G
+             \
+              H
+```
+
+Each node/region can represent a challenge.
+
+A player must navigate through connected territories.
+
+---
+
+# 11. Multiple Islands
+
+The platform contains many islands.
+
+Each island can represent:
+
+* A topic
+* A difficulty range
+* A skill domain
+* A themed challenge environment
+
+Examples:
+
+```text
+Python Archipelago
+Algorithm Atoll
+Array Islands
+Function Forest
+Data Structure Dominion
+Recursion Reef
+Sorting Sands
+Graph Galaxy
+```
+
+Players can have different progression through the same world.
+
+---
+
+# 12. Multiplayer Clash
+
+The Clash is a **real-time multiplayer coding race**.
+
+Multiple players enter the same room and compete on a shared 2D island.
+
+Example:
+
+```text
+              ISLAND CLASH
+
+       PLAYER A             PLAYER B
+          🔵                   🔴
+           \                   /
+            \                 /
+             \               /
+              [ Territory ]
+                    │
+              [ Territory ]
+               /           \
+              /             \
+         [Captured]       [Open]
+```
+
+Each player has:
+
+* Position
+* Captured territories
+* Current challenge
+* Score
+* Progress
+* Status
+
+---
+
+# 13. Clash Room
+
+A Clash occurs inside a multiplayer room.
+
+A room contains:
+
+```text
+Room
+│
+├── Match ID
+├── Island ID
+├── Host
+├── Players
+├── Maximum players
+├── Match status
+├── Start time
+├── End time
+├── Current map state
+└── Match configuration
+```
+
+Possible states:
+
+```text
+WAITING
+COUNTDOWN
+ACTIVE
+FINISHED
+CANCELLED
+```
+
+---
+
+# 14. Matchmaking
+
+Users can:
+
+### Quick Match
+
+Automatically find an available room.
+
+### Create Room
+
+Create a new Clash room.
+
+### Join Room
+
+Join using a room code/link.
+
+### Private Room
+
+Invite friends/classmates.
+
+The system should prevent a room from starting unless its minimum player requirement is met, unless the room creator explicitly starts a practice/private match.
+
+---
+
+# 15. Lobby
+
+Before a Clash begins, players enter a lobby.
+
+The lobby displays:
+
+```text
+Island
+Players
+Player avatars
+Player names
+Ready status
+Room settings
+Start countdown
+```
+
+Example:
+
+```text
+ISLAND: Algorithm Atoll
+
+🔵 Player A     READY
+🔴 Player B     READY
+🟢 Player C     READY
+🟡 Player D     READY
+
+            3
+            2
+            1
+          CLASH!
+```
+
+---
+
+# 16. Supabase Realtime
+
+Supabase Realtime handles multiplayer synchronization.
+
+It can synchronize events such as:
+
+```text
+player_joined
+player_left
+player_ready
+match_started
+territory_attempted
+territory_captured
+player_moved
+challenge_completed
+player_finished
+match_finished
+```
+
+The frontend subscribes to the relevant room/channel.
+
+---
+
+# 17. Important Multiplayer Rule — Server Authority
+
+The browser must **not be trusted to determine important game outcomes**.
+
+For example, the client must not simply send:
+
+```text
+"I captured Territory C."
+```
+
+and have the server believe it.
+
+Instead:
+
+```text
+Player submits code
+       ↓
+Backend
+       ↓
+JDoodle execution
+       ↓
+Test validation
+       ↓
+Backend determines success
+       ↓
+Backend validates territory access
+       ↓
+Database updated
+       ↓
+Realtime event emitted
+       ↓
+All players see updated territory
+```
+
+The backend/database is authoritative.
+
+This prevents basic cheating.
+
+---
+
+# 18. Territory Capture Rules
+
+A player can only capture a territory if:
+
+1. The player is allowed to participate in the match.
+2. The territory is currently available.
+3. The territory is connected to an area the player controls or can legally access.
+4. The player receives the corresponding challenge.
+5. The submitted code passes the required tests.
+6. The backend validates the attempt.
+7. The match is still active.
+
+Only then is the territory captured.
+
+---
+
+# 19. Race Conditions
+
+Multiple players may attempt the same territory simultaneously.
+
+Example:
+
+```text
+Player A ──► Territory X
+Player B ──► Territory X
+```
+
+Both might solve the problem at nearly the same time.
+
+The backend must use an atomic transaction/locking strategy.
+
+Only one valid capture should be accepted according to the game's defined rules.
+
+Possible result:
+
+```text
+Player A succeeds first
+       ↓
+Territory X = BLUE
+       ↓
+Player B receives:
+"Territory already captured."
+```
+
+This must be handled server-side rather than relying on frontend timing.
+
+---
+
+# 20. Territory Conflict Model
+
+A territory can have states:
+
+```text
+LOCKED
+AVAILABLE
+IN_PROGRESS
+CAPTURED_BY_PLAYER
+CONTESTED
+```
+
+A simple MVP can use:
+
+```text
+AVAILABLE
+CAPTURED
+```
+
+More advanced versions can support contested territories.
+
+---
+
+# 21. Pathways
+
+Territories are connected through paths.
+
+A player can only move/capture according to the map graph.
+
+Example:
+
+```text
+START
+ │
+ ├──── A ──── C
+ │            │
+ └──── B ──── D
+              │
+            GOAL
+```
+
+The backend stores the graph relationships.
+
+The frontend visualizes them.
+
+This separates:
+
+```text
+Game logic
+```
+
+from:
+
+```text
+Visual representation
+```
+
+---
+
+# 22. 2D Map Technology
+
+Use **SVG for the initial implementation**.
+
+Why SVG?
+
+* Easy territory highlighting
+* Clickable regions
+* Smooth scaling
+* Easy player markers
+* Easy path rendering
+* Works well with React
+
+Canvas can be introduced later if the map becomes extremely complex.
+
+---
+
+# 23. Player Movement
+
+Movement is primarily a representation of progression.
+
+When a player captures a connected territory:
+
+```text
+Current Territory
+       ↓
+New Territory
+       ↓
+Player marker moves
+```
+
+The frontend animates this transition.
+
+The backend determines whether movement is legal.
+
+---
+
+# 24. Multiplayer Player State
+
+Each player should have a match-specific state:
+
+```text
+player_id
+room_id
+position
+captured_territories
+current_challenge
+score
+status
+ready
+finished
+last_activity
+```
+
+Do not store rapidly changing UI-only information unnecessarily in the database.
+
+---
+
+# 25. Supabase Realtime Architecture
+
+Conceptually:
+
+```text
+                 SUPABASE
+                    │
+        ┌───────────┴───────────┐
+        │                       │
+    PostgreSQL              Realtime
+        │                       │
+        │                ┌──────┼──────┐
+        │                │      │      │
+        ▼                ▼      ▼      ▼
+     Match Data        P1     P2     P3
+```
+
+Database state is the persistent source of truth.
+
+Realtime is the synchronization mechanism.
+
+---
+
+# 26. Handling Disconnects
+
+Players can disconnect.
+
+The room should distinguish:
+
+```text
+CONNECTED
+DISCONNECTED
+RECONNECTING
+ELIMINATED
+FINISHED
+```
+
+If a player temporarily disconnects:
+
+* Their territory remains theirs.
+* Their progress remains.
+* They can reconnect to the room if the match is still active.
+* The server determines whether they are considered active.
+
+The frontend should display:
+
+> "Reconnecting..."
+
+rather than immediately declaring the player defeated.
+
+---
+
+# 27. Player Leaving
+
+If a player intentionally leaves:
+
+* They are removed from active participants.
+* Their captured territories follow the defined match rule.
+* The remaining players are notified.
+
+For the initial implementation, captured territory can remain captured rather than automatically reverting.
+
+---
+
+# 28. Clash End Conditions
+
+A match can end when:
+
+### Option A — Goal Reached
+
+First player to reach the final territory wins.
+
+### Option B — Time Limit
+
+Match ends after a fixed duration.
+
+### Option C — Full Map
+
+Match ends when all relevant territories are captured.
+
+### Recommended
+
+Use:
+
+> **First player to reach the final objective OR the time limit expires.**
+
+If the timer expires, rank players based on:
+
+1. Territories captured
+2. Difficulty-weighted points
+3. Completed challenges
+4. Tie-breaker based on validated completion timestamp
+
+---
+
+# 29. Clash Score
+
+The multiplayer score should not simply be:
+
+```text
+number of territories
+```
+
+A difficult territory should be worth more than an easy territory.
+
+Conceptually:
+
+```text
+Territory Points =
+Base Points × Difficulty Weight
+```
+
+Then:
+
+```text
+Match Score =
+Territory Points
++ Completion Bonuses
++ Objective Bonuses
+```
+
+Do not make speed the only factor.
+
+A player who solves a difficult challenge correctly should receive meaningful credit.
+
+---
+
+# 30. Multiplayer Anti-Cheat Principles
+
+The client should never directly control:
+
+* Score
+* Territory ownership
+* Completion status
+* Match winner
+* Difficulty result
+* XP rewards
+
+The backend verifies these.
+
+For example:
+
+```text
+Client:
+"I solved it."
+
+Backend:
+"Show me the execution result."
+
+JDoodle:
+"Tests passed."
+
+Backend:
+"Territory capture accepted."
+
+Database:
+"Territory belongs to Player A."
+
+Realtime:
+"Broadcast territory update."
+```
+
+---
+
+# 31. Online Compiler — JDoodle
+
+JDoodle handles code execution.
+
+Architecture:
+
+```text
+Monaco
+   ↓
+Backend
+   ↓
+JDoodle
+   ↓
+Execution result
+   ↓
+Backend
+   ↓
+Challenge result
+```
+
+The browser must never contain JDoodle private credentials.
+
+Environment:
+
+```env
+JDOODLE_CLIENT_ID=
+JDOODLE_CLIENT_SECRET=
+```
+
+---
+
+# 32. Code Execution Limits
+
+Every execution should have:
+
+* Maximum code size
+* Maximum execution time
+* Supported languages
+* Request rate limits
+* Output size limits
+
+This protects the application from abuse and excessive API usage.
+
+---
+
+# 33. Gemma AI
+
+Gemma acts as the platform's AI intelligence layer.
+
+It can perform:
+
+### Problem Generation
+
+Generate coding challenges.
+
+### Problem Validation Assistance
+
+Review generated content.
+
+### Code Explanation
+
+Explain learner code.
+
+### Feedback
+
+Identify conceptual mistakes.
+
+### Efficiency Suggestions
+
+Discuss possible algorithmic improvements.
+
+### AI Mentor
+
+Analyze learner progress.
+
+### Course Generation
+
+Generate personalized learning courses.
+
+### Documentation
+
+Create structured learning material.
+
+### Learning Recommendations
+
+Recommend what to study next.
+
+---
+
+# 34. AI Must Not Be the Source of Truth
+
+The platform explicitly separates AI responsibilities from deterministic systems.
+
+### AI decides/suggests:
+
+* Problem wording
+* Explanations
+* Recommendations
+* Learning material
+* Feedback
+
+### Backend determines:
+
+* Authentication
+* Authorization
+* Score
+* Territory ownership
+* Match state
+* Difficulty state
+* Rewards
+
+### JDoodle determines:
+
+* Whether submitted code executes
+* Compilation errors
+* Test execution results
+
+### Supabase determines:
+
+* Persistent application data
+
+This separation greatly improves reliability.
+
+---
+
+# 35. AI Problem Generation Pipeline
+
+```text
+Learner Profile
+      ↓
+Adaptive Engine
+      ↓
+Target Topic + Difficulty
+      ↓
+Gemma
+      ↓
+Problem
+      ↓
+Schema Validation
+      ↓
+Test Generation
+      ↓
+Reference Solution
+      ↓
+JDoodle Verification
+      ↓
+Difficulty Validation
+      ↓
+Approved Problem
+```
+
+Broken problems are rejected.
+
+---
+
+# 36. AI Code Feedback Pipeline
+
+```text
+Problem
++
+User Code
++
+Language
++
+Execution Results
++
+Errors
+       ↓
+      Gemma
+       ↓
+Structured Feedback
+       ↓
+Frontend
+```
+
+Feedback includes:
+
+* Code summary
+* Mistakes
+* Explanation
+* Improvement suggestions
+* Efficiency suggestions
+* Complexity discussion
+* Recommended topic
+
+---
+
+# 37. Adaptive Difficulty Engine
+
+Difficulty ranges from:
+
+```text
+1 → 10
+```
+
+The engine considers:
+
+* Correctness
+* Recent success rate
+* Attempts
+* Hints
+* Time
+* Compiler errors
+* Topic mastery
+* Existing difficulty
+
+Conceptually:
+
+```text
+Performance Signal =
+    Correctness
+  + Recent Success
+  + Topic Mastery
+  + Appropriate Speed
+  - Excessive Hint Usage
+  - Repeated Failure
+```
+
+Difficulty changes gradually.
+
+```text
+Excellent performance
+       ↓
+Difficulty + small step
+
+Stable performance
+       ↓
+Difficulty unchanged
+
+Repeated struggle
+       ↓
+Difficulty - small step
+```
+
+No single failed attempt should suddenly make the learner's problems extremely easy.
+
+---
+
+# 38. Difficulty and Multiplayer
+
+For competitive Clash rooms, completely independent difficulty can create unfair matches.
+
+Therefore, the matchmaker should attempt to group players within a reasonable skill range.
+
+Example:
+
+```text
+Player A: Difficulty 5
+Player B: Difficulty 5
+Player C: Difficulty 6
+Player D: Difficulty 5
+```
+
+This creates a reasonably competitive match.
+
+A player's long-term difficulty model remains independent from the match itself.
+
+---
+
+# 39. Practice System
+
+Practice is separate from Clash.
+
+Features:
+
+* Topic selection
+* Difficulty
+* Language
+* Search
+* AI-generated problems
+* Code editor
+* Execution
+* Hints
+* AI feedback
+* History
+* Progress
+
+Practice results can influence the learner model.
+
+---
+
+# 40. AI Mentor
+
+The AI Mentor receives a compact learner profile.
+
+Example:
+
+```text
+Skill: Intermediate
+
+Strong:
+Arrays
+Loops
+
+Weak:
+Recursion
+Complexity
+
+Recent:
+5 attempts
+3 solved
+2 failed
+
+Current difficulty:
+5
+```
+
+The mentor can recommend:
+
+> Revise recursion basics → complete two practice problems → attempt the next Clash challenge.
+
+---
+
+# 41. Mentor Assistance Levels
+
+### Level 1 — Hint
+
+Small clue.
+
+### Level 2 — Concept
+
+Explain the relevant concept.
+
+### Level 3 — Guided Approach
+
+Explain how to reason through the problem.
+
+### Level 4 — Full Explanation
+
+Only when explicitly requested.
+
+The mentor should prioritize learning over giving answers.
+
+---
+
+# 42. AI Course Generator
+
+Users can create custom courses.
+
+Input:
+
+```text
+Topic
+Current level
+Programming language
+Goal
+Available time
+Desired depth
+```
+
+Output:
+
+```text
+Course
+│
+├── Prerequisites
+├── Objectives
+├── Module 1
+├── Module 2
+├── Module 3
+├── Practice
+├── Challenges
+└── Assessment
+```
+
+Each module can contain:
+
+* Documentation
+* Explanation
+* Examples
+* Practice
+* Questions
+* Challenges
+
+---
+
+# 43. Web Research
+
+The platform can retrieve external educational resources.
+
+Architecture:
+
+```text
+User Request
+     ↓
+Backend
+     ↓
+Search
+     ↓
+Retrieve
+     ↓
+Sanitize
+     ↓
+Gemma
+     ↓
+Structured Learning Material
+     ↓
+Sources
+```
+
+Web content is untrusted.
+
+The system must defend against:
+
+* Prompt injection
+* Malicious instructions
+* Unsafe redirects
+* Huge pages
+* Excessive requests
+* Arbitrary URL abuse
+
+Sources should be retained for citations.
+
+---
+
+# 44. Gamification
+
+The system includes:
+
+### XP
+
+Personal progression.
+
+### Levels
+
+Long-term progression.
+
+### Streaks
+
+Consistent learning.
+
+### Badges
+
+Achievements.
+
+### Islands
+
+Learning world.
+
+### Territories
+
+Individual challenges.
+
+### Leaderboards
+
+Competitive ranking.
+
+### Custom badges
+
+Personal/cosmetic achievements.
+
+---
+
+# 45. XP vs Leaderboard Score
+
+These should be separate.
+
+```text
+XP
+=
+Personal progression
+
+Leaderboard Score
+=
+Competitive performance
+```
+
+This prevents competitive ranking from becoming the only measure of progress.
+
+---
+
+# 46. Badge System
+
+Examples:
+
+```text
+First Code
+First Island
+10 Problems
+50 Problems
+Debugging Master
+Array Explorer
+Algorithm Apprentice
+Hard Challenge
+7-Day Streak
+Course Complete
+Clash Champion
+```
+
+Badges should represent meaningful achievements.
+
+---
+
+# 47. Custom Badges
+
+Users can have custom badges for:
+
+* Personal achievements
+* Events
+* Special challenges
+* Cosmetic profile customization
+
+Custom badges must not be allowed to arbitrarily manipulate competitive scores.
+
+---
+
+# 48. Streaks
+
+A streak requires meaningful learning activity.
+
+Examples:
+
+* Solve a problem
+* Complete a meaningful practice session
+* Complete a course activity
+
+Simply opening the application should not preserve a streak.
+
+---
+
+# 49. Leaderboard
+
+Leaderboard fields:
+
+```text
+Rank
+Username
+Score
+XP
+Problems Solved
+Current Streak
+Islands/Territories
+```
+
+Leaderboard scoring:
+
+```text
+Problem Points =
+Base × Difficulty Weight
+
+Streak Bonus =
+Streak × configured multiplier
+
+Achievement Bonus =
+Configured achievement points
+
+Final Score =
+Problem Points
++ Streak Bonus
++ Achievement Bonus
+```
+
+Failures should not cause large negative scores.
+
+---
+
+# 50. Database Architecture
+
+Core tables:
+
+```text
+profiles
+
+problems
+problem_test_cases
+problem_attempts
+
+islands
+island_territories
+territory_connections
+
+clash_rooms
+clash_players
+clash_events
+clash_territory_captures
+
+user_progress
+user_topic_progress
+
+badges
+user_badges
+custom_badges
+
+streaks
+
+courses
+course_modules
+course_progress
+
+ai_mentor_sessions
+
+raised_problems
+
+leaderboard / leaderboard views
+```
+
+---
+
+# 51. Island Database Model
+
+An island consists of territories.
+
+Conceptually:
+
+```text
+islands
+   │
+   └── island_territories
+             │
+             └── territory_connections
+```
+
+Example:
+
+```text
+Island A
+
+Territory 1
+     │
+     ├──── Territory 2
+     │
+     └──── Territory 3
+             │
+             └──── Territory 4
+```
+
+The graph structure allows branching paths.
+
+---
+
+# 52. Clash Database Model
+
+```text
+clash_rooms
+     │
+     ├── clash_players
+     │
+     ├── clash_events
+     │
+     └── territory captures
+```
+
+Each match has a unique ID.
+
+Players are associated with a match through `clash_players`.
+
+---
+
+# 53. Clash Events
+
+Important events can be recorded:
+
+```text
+PLAYER_JOINED
+PLAYER_READY
+MATCH_STARTED
+PLAYER_MOVED
+CHALLENGE_STARTED
+CHALLENGE_SUBMITTED
+TERRITORY_CAPTURED
+PLAYER_DISCONNECTED
+PLAYER_RECONNECTED
+PLAYER_FINISHED
+MATCH_FINISHED
+```
+
+This provides a useful audit trail and enables debugging/replay features later.
+
+---
+
+# 54. Real-Time Communication
+
+Supabase Realtime communicates match updates.
+
+Example:
+
+```text
+Player A captures Territory B
+            ↓
+Backend validates
+            ↓
+Database updated
+            ↓
+Realtime event
+            ↓
+Player A receives update
+Player B receives update
+Player C receives update
+Player D receives update
+```
+
+All players see the same authoritative map state.
+
+---
+
+# 55. Realtime vs Database
+
+Realtime should not replace the database.
+
+### Database
+
+Persistent truth.
+
+### Realtime
+
+Fast synchronization.
+
+```text
+Database
+   ↓
+Persistent State
+
+Realtime
+   ↓
+Live State Updates
+```
+
+If a client disconnects and reconnects, it should retrieve the current match state from the database and then resubscribe to Realtime.
+
+---
+
+# 56. Room Security
+
+Users must not be able to:
+
+* Join arbitrary unauthorized rooms
+* Modify another player's state
+* Change territory ownership
+* Change scores
+* Declare themselves winners
+* Modify match configuration after start
+
+Room operations must be validated server-side.
+
+---
+
+# 57. Authentication and Authorization
+
+Supabase Auth handles identity.
+
+RLS protects user-owned data.
+
+Backend authorization protects privileged match operations.
+
+The architecture is:
+
+```text
+User
+ ↓
+Authentication
+ ↓
+Authorization
+ ↓
+Validation
+ ↓
+Operation
+```
+
+---
+
+# 58. Security Architecture
+
+The backend is the security boundary.
+
+```text
+                   INTERNET
+                       │
+                       ▼
+                 FRONTEND
+                       │
+                    HTTPS
+                       │
+                       ▼
+                 BACKEND API
+                       │
+          ┌────────────┼────────────┐
+          ▼            ▼            ▼
+      Supabase       Gemma       JDoodle
+          │
+       Realtime
+          │
+       Players
+```
+
+Private API credentials remain inside the backend environment.
+
+---
+
+# 59. Environment Variables
+
+Example:
+
+```env
+# Supabase
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# AI
+GEMMA_API_KEY=
+
+# JDoodle
+JDOODLE_CLIENT_ID=
+JDOODLE_CLIENT_SECRET=
+
+# Web Research
+WEB_SEARCH_API_KEY=
+
+# Application
+APP_URL=
+API_URL=
+```
+
+Never commit actual values.
+
+`.gitignore`:
+
+```text
+.env
+.env.local
+.env.*.local
+```
+
+Commit:
+
+```text
+.env.example
+```
+
+---
+
+# 60. Secret Rules
+
+Never expose:
+
+```text
+SUPABASE_SERVICE_ROLE_KEY
+GEMMA_API_KEY
+JDOODLE_CLIENT_SECRET
+WEB_SEARCH_API_KEY
+```
+
+to the browser.
+
+Never place them in:
+
+* React code
+* HTML
+* client bundles
+* GitHub
+* screenshots
+* public configuration
+
+---
+
+# 61. Input Validation
+
+Use Zod to validate:
+
+* API requests
+* User forms
+* Problem generation
+* Course generation
+* AI outputs
+* Match operations
+* Room creation
+* Challenge submissions
+
+Invalid data must be rejected before business logic executes.
+
+---
+
+# 62. AI Output Validation
+
+AI output should use structured schemas.
+
+For example:
+
+```json
+{
+  "title": "...",
+  "description": "...",
+  "difficulty": 5,
+  "topic": "...",
+  "constraints": [],
+  "examples": [],
+  "testCases": []
+}
+```
+
+The backend validates the structure before using it.
+
+---
+
+# 63. Rate Limiting
+
+Rate limits should apply to expensive endpoints:
+
+```text
+AI generation
+AI mentor
+Course generation
+Code execution
+Web research
+Room creation
+Challenge submissions
+```
+
+This prevents abuse and controls cost.
+
+---
+
+# 64. Cost Management
+
+The system should:
+
+* Cache validated problems
+* Reuse problems where appropriate
+* Avoid regenerating identical content
+* Limit AI context size
+* Summarize old learner history
+* Limit web retrieval
+* Limit code execution
+* Rate-limit expensive features
+
+---
+
+# 65. AI Context Management
+
+Do not send the entire user history to Gemma.
+
+Construct a compact learner context:
+
+```text
+Current Level
+Current Difficulty
+Strong Topics
+Weak Topics
+Recent Attempts
+Recent Mistakes
+Learning Goals
+Course Progress
+```
+
+This reduces token usage and improves response quality.
+
+---
+
+# 66. Error Handling
+
+External systems can fail.
+
+### Gemma unavailable
+
+Show:
+
+> AI service is temporarily unavailable. Your progress is safe.
+
+### JDoodle unavailable
+
+Show:
+
+> Code execution is temporarily unavailable. Please try again.
+
+### Supabase unavailable
+
+Show:
+
+> We couldn't save your progress. Please retry.
+
+### Realtime disconnect
+
+Show:
+
+> Reconnecting to Clash...
+
+The match should not immediately punish the player.
+
+---
+
+# 67. Dashboard
+
+The dashboard should display:
+
+```text
+Level
+XP
+Streak
+Problems Solved
+Current Skill
+Current Difficulty
+
+Continue Clash
+Continue Course
+Practice Weak Topic
+
+Island Progress
+Recent Badges
+Recent Performance
+AI Mentor Recommendation
+```
+
+---
+
+# 68. Practice Page
+
+Features:
+
+* Topic filter
+* Difficulty filter
+* Language filter
+* Search
+* Problem cards
+* Start problem
+* Attempts
+* Completion history
+
+---
+
+# 69. Clash Page
+
+The main multiplayer screen should contain:
+
+```text
+┌────────────────────────────────────────────┐
+│ TIMER                 CLASH STATUS         │
+├────────────────────────────────────────────┤
+│                                            │
+│              2D ISLAND MAP                 │
+│                                            │
+│     🔵──────🔵                            │
+│       \      │                             │
+│        \     🔴──────🔴                    │
+│         \                                  │
+│          🟢                                │
+│                                            │
+├─────────────────────┬──────────────────────┤
+│ Players              │ Current Challenge   │
+│ 🔵 Player A          │ Problem              │
+│ 🔴 Player B          │                      │
+│ 🟢 Player C          │ Code Editor          │
+│ 🟡 Player D          │                      │
+│                      │ Run / Submit        │
+└─────────────────────┴──────────────────────┘
+```
+
+The exact layout can adapt responsively.
+
+---
+
+# 70. Clash Player Panel
+
+Show:
+
+* Player name
+* Avatar/color
+* Captured territories
+* Score
+* Current position
+* Connection status
+
+Do not expose unnecessary private information.
+
+---
+
+# 71. Clash Lobby
+
+Features:
+
+* Room code
+* Island preview
+* Player list
+* Ready buttons
+* Match settings
+* Countdown
+* Start match
+
+---
+
+# 72. Match Results
+
+After the Clash:
+
+```text
+🏆 WINNER
+
+Player A
+Territories: 8
+Score: 740
+Challenges Solved: 7
+
+Player B
+Territories: 6
+Score: 620
+
+Player C
+Territories: 4
+Score: 410
+```
+
+Then show:
+
+* XP earned
+* Badges
+* AI feedback
+* Performance summary
+* Weak topics
+* Recommended next practice
+
+---
+
+# 73. AI Post-Clash Summary
+
+After the match, the AI can summarize:
+
+```text
+What you did well
+What you struggled with
+Most common mistake
+Most important concept
+Efficiency improvement
+Recommended practice
+Recommended topic
+```
+
+This transforms competition into a learning opportunity.
+
+---
+
+# 74. Profile
+
+Profile displays:
+
+* Avatar
+* Username
+* XP
+* Level
+* Badges
+* Islands
+* Clash statistics
+* Practice statistics
+* Course progress
+* Topic strengths
+* Topic weaknesses
+
+---
+
+# 75. Leaderboard
+
+The leaderboard can support:
+
+### Global
+
+All players.
+
+### Weekly
+
+Current week's performance.
+
+### Monthly
+
+Monthly performance.
+
+### Friends
+
+Private-room/friend group competition if implemented.
+
+Avoid making the leaderboard the sole definition of success.
+
+---
+
+# 76. Problem Reporting
+
+Every generated problem should include:
+
+```text
+Report Problem
+```
+
+Options:
+
+* Incorrect answer
+* Incorrect test case
+* Ambiguous problem
+* Broken execution
+* Incorrect difficulty
+* Other
+
+Reports enter a review queue.
+
+---
+
+# 77. Testing Strategy
+
+## Unit Tests
+
+Test:
+
+* Difficulty algorithm
+* XP
+* Score
+* Badges
+* Streaks
+* Territory validation
+* Path validation
+* Match state transitions
+
+## Integration Tests
+
+Test:
+
+```text
+Backend → Supabase
+Backend → Gemma
+Backend → JDoodle
+Backend → Realtime
+```
+
+## Multiplayer Tests
+
+Test:
+
+* Joining room
+* Leaving room
+* Reconnection
+* Simultaneous territory capture
+* Match start
+* Match finish
+* Duplicate submissions
+* Race conditions
+
+## E2E
+
+Test:
+
+```text
+Register
+ ↓
+Login
+ ↓
+Join Clash
+ ↓
+Second player joins
+ ↓
+Match starts
+ ↓
+Solve challenge
+ ↓
+Capture territory
+ ↓
+Realtime update
+ ↓
+Finish match
+ ↓
+Receive rewards
+ ↓
+AI summary
+```
+
+---
+
+# 78. Accessibility
+
+Support:
+
+* Keyboard navigation
+* Screen readers
+* High contrast
+* Reduced motion
+* Accessible labels
+* Clear error messages
+* Resizable interface
+
+Multiplayer visual effects must not be the only way to communicate important information.
+
+---
+
+# 79. Responsive Design
+
+Support:
+
+* Desktop
+* Laptop
+* Tablet
+* Mobile
+
+The full coding experience should prioritize desktop/tablet because of the code editor.
+
+The map and leaderboard should remain usable on smaller screens.
+
+---
+
+# 80. Complete Frontend Component List
+
+```text
+App
+│
+├── Authentication
+│   ├── Login
+│   ├── Register
+│   └── OAuth
+│
+├── Navigation
+│
+├── Dashboard
+│   ├── XPCard
+│   ├── StreakCard
+│   ├── ProgressCard
+│   ├── RecommendationCard
+│   ├── ContinueCard
+│   └── AchievementCard
+│
+├── Island World
+│   ├── IslandMap
+│   ├── Territory
+│   ├── TerritoryPath
+│   ├── PlayerMarker
+│   └── IslandInfo
+│
+├── Clash
+│   ├── ClashLobby
+│   ├── PlayerList
+│   ├── ClashMap
+│   ├── ClashHUD
+│   ├── ChallengePanel
+│   ├── CodeEditor
+│   ├── HintPanel
+│   ├── TestResults
+│   ├── LiveScoreboard
+│   ├── ConnectionStatus
+│   └── ClashResults
+│
+├── Practice
+│   ├── ProblemList
+│   ├── Filters
+│   ├── ProblemView
+│   └── PracticeHistory
+│
+├── AI
+│   ├── Mentor
+│   ├── MentorChat
+│   ├── RecommendationPanel
+│   ├── CodeFeedback
+│   └── CourseGenerator
+│
+├── Courses
+│   ├── CourseList
+│   ├── CourseOverview
+│   ├── Module
+│   ├── Lesson
+│   ├── CourseProgress
+│   └── Assessment
+│
+├── Gamification
+│   ├── XP
+│   ├── Level
+│   ├── Badge
+│   ├── BadgeCollection
+│   ├── Streak
+│   └── Achievements
+│
+├── Leaderboard
+│
+├── Profile
+│
+└── Settings
+```
+
+---
+
+# 81. Complete Backend Component List
+
+```text
+Backend
+│
+├── Authentication
+│
+├── Authorization
+│
+├── Problems
+│   ├── Generator
+│   ├── Validator
+│   ├── Test Generator
+│   └── Problem Repository
+│
+├── Code Execution
+│   └── JDoodle Service
+│
+├── AI
+│   ├── Problem Generator
+│   ├── Code Analyzer
+│   ├── Mentor
+│   ├── Course Generator
+│   └── Recommendation Engine
+│
+├── Web Research
+│   ├── Search
+│   ├── Retrieval
+│   ├── Sanitization
+│   └── Citation
+│
+├── Adaptive Learning
+│   ├── Difficulty Engine
+│   ├── Topic Mastery
+│   └── Learner Model
+│
+├── Gamification
+│   ├── XP
+│   ├── Levels
+│   ├── Badges
+│   ├── Streaks
+│   └── Leaderboard
+│
+├── Multiplayer
+│   ├── Matchmaking
+│   ├── Room Management
+│   ├── Match State
+│   ├── Territory Validation
+│   ├── Player State
+│   ├── Race Condition Handling
+│   └── Reconnection
+│
+├── Courses
+│
+├── Reports
+│
+├── Rate Limiting
+│
+└── Validation
+```
+
+---
+
+# 82. Complete Database Components
+
+```text
+profiles
+
+problems
+problem_test_cases
+problem_attempts
+
+islands
+island_territories
+territory_connections
+
+clash_rooms
+clash_players
+clash_events
+clash_territory_captures
+
+user_progress
+user_topic_progress
+
+badges
+user_badges
+custom_badges
+
+streaks
+
+courses
+course_modules
+course_progress
+
+ai_mentor_sessions
+
+raised_problems
+```
+
+---
+
+# 83. Complete User Journey
+
+```text
+REGISTER
+   ↓
+INITIAL PROFILE
+   ↓
+OPTIONAL SKILL ASSESSMENT
+   ↓
+PERSONALIZED STARTING LEVEL
+   ↓
+DASHBOARD
+   │
+   ├───────────────┐
+   ▼               ▼
+PRACTICE          CLASH
+   │               │
+   │          MATCHMAKING
+   │               │
+   │           ROOM LOBBY
+   │               │
+   │           2D ISLAND
+   │               │
+   │          CODE CHALLENGE
+   │               │
+   │          JDoodle
+   │               │
+   └───────────────┤
+                   ▼
+              AI ANALYSIS
+                   │
+          ┌────────┴─────────┐
+          ▼                  ▼
+     DIFFICULTY          LEARNER MODEL
+       UPDATE                 │
+          │                   ▼
+          │              AI MENTOR
+          │                   │
+          │          ┌────────┴────────┐
+          │          ▼                 ▼
+          │       PRACTICE          COURSE
+          │
+          ▼
+      NEXT CHALLENGE
+```
+
+---
+
+# 84. Critical Architecture Rules
+
+The implementation must follow these rules.
+
+### Rule 1 — Server Authority
+
+The client cannot decide:
+
+* Winner
+* Score
+* Territory ownership
+* Match state
+* XP
+* Rewards
+
+### Rule 2 — AI Validation
+
+AI-generated coding problems must be validated before being presented as official challenges.
+
+### Rule 3 — Real Compiler Results
+
+AI cannot claim that code passed or failed.
+
+JDoodle/backend execution results are authoritative.
+
+### Rule 4 — Secure Secrets
+
+Private API keys remain server-side.
+
+### Rule 5 — Database Truth
+
+Supabase stores persistent match and learning state.
+
+### Rule 6 — Realtime Synchronization
+
+Supabase Realtime synchronizes live multiplayer changes.
+
+### Rule 7 — Failure Is Learning
+
+Failures should adjust difficulty and provide feedback rather than heavily punish the learner.
+
+### Rule 8 — Fair Multiplayer
+
+Players should be matched within a reasonable skill range.
+
+### Rule 9 — Race Conditions
+
+Simultaneous territory captures must be resolved atomically by the backend.
+
+### Rule 10 — Reconnection
+
+Temporary network failures should not immediately destroy a player's match.
+
+### Rule 11 — Web Safety
+
+Retrieved webpages are untrusted reference material.
+
+### Rule 12 — Learning First
+
+Gamification should encourage learning rather than manipulate attention.
+
+---
+
+# 85. Final System Architecture
+
+```text
+                              USERS
+                                │
+                                ▼
+                     ┌────────────────────┐
+                     │   React Frontend   │
+                     │                    │
+                     │ Dashboard          │
+                     │ Practice           │
+                     │ 2D Island World    │
+                     │ Multiplayer Clash  │
+                     │ AI Mentor          │
+                     │ Courses            │
+                     │ Leaderboard        │
+                     │ Profile            │
+                     └─────────┬──────────┘
+                               │
+                              HTTPS
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │    Node/Express      │
+                    │      Backend         │
+                    │                      │
+                    │ Auth                 │
+                    │ Matchmaking          │
+                    │ Match State          │
+                    │ Territory Logic      │
+                    │ AI Orchestration     │
+                    │ Difficulty Engine    │
+                    │ Scoring              │
+                    │ Validation           │
+                    │ Web Research         │
+                    └──────┬───────┬───────┘
+                           │       │
+              ┌────────────┘       └───────────────┐
+              ▼                                    ▼
+       ┌──────────────┐                     ┌──────────────┐
+       │   Supabase   │                     │    Gemma     │
+       │              │                     │              │
+       │ PostgreSQL   │                     │ Problems     │
+       │ Auth         │                     │ Feedback     │
+       │ RLS          │                     │ Mentor       │
+       │ Realtime     │                     │ Courses      │
+       └──────┬───────┘                     └──────────────┘
+              │
+              │ Realtime
+              │
+       ┌──────┴────────┐
+       │               │
+      P1              P2
+       │               │
+      P3              P4
+       │               │
+       └── LIVE CLASH ─┘
+
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │   JDoodle    │
+                    │ Code Runner  │
+                    └──────────────┘
+
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │ Web Research │
+                    │    Layer     │
+                    └──────────────┘
+```
+
+---
+
+# 86. Final Functional Definition
+
+The finished platform must provide **all** of the following:
+
+## Learning
+
+* AI-generated coding problems
+* Practice problems
+* Adaptive difficulty
+* Topic mastery
+* Learning recommendations
+* AI Mentor
+* Custom AI courses
+* Documentation
+* AI code analysis
+* Efficiency suggestions
+* Hints
+* Progress analytics
+
+## Coding
+
+* Monaco code editor
+* Multiple language architecture
+* JDoodle execution
+* Run
+* Submit
+* Test cases
+* Compiler errors
+* Execution results
+* Code history
+
+## Multiplayer
+
+* Matchmaking
+* Create room
+* Join room
+* Private rooms
+* Lobby
+* Ready system
+* Countdown
+* Multiple players
+* Real-time player communication/state synchronization
+* 2D island map
+* Territory nodes
+* Connected pathways
+* Player movement
+* Territory capture
+* Competitive scoring
+* Match timer
+* Winner determination
+* Reconnection
+* Disconnect handling
+* Race-condition protection
+* Match results
+* Post-match AI analysis
+
+## Gamification
+
+* Islands
+* Territories
+* XP
+* Levels
+* Streaks
+* Badges
+* Custom badges
+* Achievements
+* Leaderboards
+* Difficulty progression
+
+## AI
+
+* Problem generation
+* Problem validation assistance
+* Code analysis
+* Feedback
+* Mentor
+* Course generation
+* Learning recommendations
+* Web-assisted research
+* Documentation generation
+
+## Data
+
+* User profiles
+* Progress
+* Attempts
+* Problems
+* Test cases
+* Topic mastery
+* Islands
+* Territories
+* Connections
+* Rooms
+* Players
+* Match events
+* Captures
+* Courses
+* Badges
+* Streaks
+* Reports
+
+## Security
+
+* Supabase Auth
+* Row Level Security
+* Backend authorization
+* Environment variables
+* Secret isolation
+* Input validation
+* AI output validation
+* Rate limiting
+* Code execution limits
+* Web retrieval restrictions
+* Prompt-injection protection
+* Server-authoritative multiplayer
+* Atomic territory capture
+* Secure error handling
+
+---
+
+# 87. Final Product Philosophy
+
+The platform should feel like a **competitive 2D coding adventure**, not a conventional online judge.
+
+A learner should be able to look at the screen and understand:
+
+> "There is an island. There are multiple paths. Other players are competing against me. I need to solve coding challenges to capture territory and reach the objective."
+
+But underneath the game is a serious adaptive learning engine.
+
+```text
+                    GAME
+                     │
+              makes learning
+                engaging
+                     │
+                     ▼
+                  CLASH
+                     │
+              creates competition
+                     │
+                     ▼
+                  CODING
+                     │
+             demonstrates skill
+                     │
+                     ▼
+                AI ANALYSIS
+                     │
+              explains mistakes
+                     │
+                     ▼
+              LEARNER MODEL
+                     │
+             understands user
+                     │
+                     ▼
+             ADAPTIVE ENGINE
+                     │
+            adjusts difficulty
+                     │
+                     ▼
+                AI MENTOR
+                     │
+           recommends next step
+                     │
+                     ▼
+                 PRACTICE
+                     │
+                     ▼
+               NEXT CLASH
+```
+
+### The final concept is therefore:
+
+> **A real-time multiplayer coding world where players compete across branching 2D island territories by solving programming challenges, while an AI learning engine continuously adapts the difficulty, analyzes their code, recommends what to study, and generates personalized learning paths.**
+
+The **multiplayer game is the engagement layer.**
+
+The **AI is the personalization layer.**
+
+The **compiler is the execution authority.**
+
+The **backend is the game authority.**
+
+The **database is the persistent source of truth.**
+
+And **education remains the purpose of the entire system.**

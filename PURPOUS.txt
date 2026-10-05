@@ -1,0 +1,872 @@
+# Gamified AI-Powered Coding Learning Platform
+
+## 1. Project Overview
+
+The proposed project is an **AI-powered, gamified learning platform focused on programming and coding education**.
+
+Traditional coding-learning platforms often present programming as a sequence of tutorials, lectures, and exercises. While these approaches provide useful content, many learners struggle to remain engaged, understand their mistakes, identify what they should learn next, and maintain a consistent learning path.
+
+This project addresses these challenges by combining:
+
+* **AI-generated coding problems**
+* **Adaptive difficulty**
+* **Gamified progression**
+* **Interactive coding challenges**
+* **AI-powered code analysis**
+* **Personalized learning recommendations**
+* **AI-generated custom courses**
+* **Web-assisted learning resources**
+* **Progress tracking and competitive leaderboards**
+
+The platform is designed around a central idea:
+
+> **Learning to code should feel like progressing through an interactive game while still providing the depth and discipline of a structured educational platform.**
+
+---
+
+# 2. Problem Statement
+
+Learning programming can be difficult for beginners because the learning process frequently suffers from several problems:
+
+### 2.1 Lack of sustained engagement
+
+Many coding platforms rely heavily on static exercises and conventional lesson structures. Students may initially practice but gradually lose motivation when the learning experience becomes repetitive.
+
+### 2.2 One-size-fits-all difficulty
+
+Most learning systems provide predefined problem difficulties. A beginner who struggles with a topic may receive problems that are too difficult, while a learner who already understands the concept may receive problems that are too easy.
+
+### 2.3 Limited understanding of mistakes
+
+A compiler can indicate that a program is incorrect, but an error message does not necessarily explain:
+
+* Why the approach failed
+* What concept was misunderstood
+* How the code could be improved
+* Whether the algorithm is efficient
+* What the learner should study next
+
+### 2.4 Difficulty choosing what to learn
+
+Beginners frequently ask:
+
+> "What should I learn next?"
+
+Without an understanding of their current strengths and weaknesses, learners may jump between unrelated topics.
+
+### 2.5 Lack of personalized learning paths
+
+Different learners have different goals.
+
+For example:
+
+* One learner may want to learn Python fundamentals.
+* Another may want to prepare for coding interviews.
+* Another may want to learn algorithms.
+* Another may want to build web applications.
+
+A fixed curriculum cannot optimally serve every learner.
+
+### 2.6 Learning resources are fragmented
+
+Useful programming documentation and explanations are distributed across documentation websites, tutorials, articles, and educational resources. Learners often have to search through multiple sources before finding material appropriate to their current level.
+
+---
+
+# 3. Proposed Solution
+
+The project proposes a **gamified adaptive coding-learning ecosystem** where the learner progresses through programming challenges while an AI system continuously analyzes their performance.
+
+The platform combines several interconnected systems:
+
+```text
+                    ┌─────────────────────┐
+                    │      Learner        │
+                    └──────────┬──────────┘
+                               │
+                ┌──────────────┴──────────────┐
+                │                             │
+                ▼                             ▼
+        ┌───────────────┐             ┌───────────────┐
+        │ Island Clash  │             │   Practice    │
+        │   Challenges  │             │    Problems   │
+        └───────┬───────┘             └───────┬───────┘
+                │                             │
+                └──────────────┬──────────────┘
+                               ▼
+                     ┌──────────────────┐
+                     │ Online Code Judge│
+                     └────────┬─────────┘
+                              │
+                              ▼
+                    ┌──────────────────┐
+                    │   AI Analysis    │
+                    └────────┬─────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              ▼              ▼              ▼
+          Feedback       Difficulty      Learning
+                           Update        Recommendation
+              │              │              │
+              └──────────────┼──────────────┘
+                             ▼
+                     Learner Progress
+```
+
+---
+
+# 4. Core Concept — Island Clash
+
+The primary gamification mechanic of the platform is the **Island Clash**.
+
+Instead of presenting coding questions as an isolated list of exercises, problems are represented as challenges associated with different islands or territories.
+
+A learner attempts to **capture/conquer an island by successfully solving its coding challenge**.
+
+### Example flow
+
+```text
+Explore Island
+      ↓
+Receive AI-generated challenge
+      ↓
+Understand the problem
+      ↓
+Write code
+      ↓
+Run / submit code
+      ↓
+Automated evaluation
+      ↓
+ ┌────┴────┐
+ │         │
+PASS      FAIL
+ │         │
+ ▼         ▼
+Capture   Retry / Hint
+Island
+ │
+ ▼
+AI Code Analysis
+ │
+ ▼
+Learning Summary
+ │
+ ▼
+XP / Badge / Progress
+```
+
+This provides a clear visual representation of progress while retaining the educational purpose of the activity.
+
+---
+
+# 5. AI-Generated Coding Problems
+
+The platform uses AI to generate programming problems based on the learner's:
+
+* Current skill level
+* Previous performance
+* Topics studied
+* Recent mistakes
+* Difficulty level
+* Learning goals
+
+Problems should not simply be generated and immediately displayed.
+
+A validation pipeline should be used:
+
+```text
+AI generates problem
+        ↓
+Problem validation
+        ↓
+Test-case generation
+        ↓
+Reference-solution verification
+        ↓
+Difficulty verification
+        ↓
+Problem approved
+        ↓
+Presented to learner
+```
+
+This reduces the possibility of:
+
+* Incorrect expected outputs
+* Ambiguous questions
+* Impossible problems
+* Incorrect test cases
+* Problems that do not match the claimed difficulty
+
+---
+
+# 6. Adaptive Difficulty System
+
+The platform dynamically adjusts the difficulty of future problems according to the learner's performance.
+
+Instead of simply increasing difficulty after every successful answer, the system considers multiple factors.
+
+### Possible factors
+
+* Correctness
+* Number of attempts
+* Time taken
+* Hints used
+* Compiler/runtime errors
+* Recent success rate
+* Topic mastery
+* Problem difficulty
+
+The platform maintains a bounded difficulty scale:
+
+```text
+1 ───────────────────────── 10
+Easy                         Hard
+```
+
+Difficulty should change gradually rather than jumping dramatically.
+
+### Example conceptual model
+
+```text
+Performance Score =
+    Correctness
+  + Efficiency Factor
+  + Recent Success
+  - Hint Usage
+  - Repeated Failure
+```
+
+The resulting performance score is used to determine whether the next problem should become:
+
+* Slightly harder
+* Approximately the same difficulty
+* Slightly easier
+
+This allows learners to remain challenged without becoming overwhelmed.
+
+The purpose is **adaptive learning and sustained engagement**, rather than forcing users into increasingly difficult problems regardless of their ability.
+
+---
+
+# 7. AI-Powered Code Feedback
+
+After a learner submits code, the system provides an AI-generated learning analysis.
+
+The feedback can include:
+
+### Code Summary
+
+A simple explanation of what the learner's program does.
+
+### Mistake Identification
+
+Explanation of important logical or conceptual mistakes.
+
+### Improvement Suggestions
+
+Suggestions for improving:
+
+* Readability
+* Structure
+* Naming
+* Logic
+* Maintainability
+
+### Efficiency Suggestions
+
+Where appropriate, the AI can discuss:
+
+* Time complexity
+* Space complexity
+* Algorithm selection
+* Unnecessary operations
+* Possible optimizations
+
+### Learning Recommendation
+
+The system can identify concepts the learner should revise before attempting similar problems.
+
+The AI should be provided with information such as:
+
+* Original problem
+* Submitted code
+* Programming language
+* Test results
+* Compiler errors
+* Runtime information where available
+
+This reduces the possibility of the AI making unsupported claims about the code.
+
+---
+
+# 8. Practice Problems
+
+The platform contains a dedicated **Practice** section separate from Island Clash.
+
+Learners can practice AI-generated problems without affecting the main island progression.
+
+Practice problems can be categorized by:
+
+* Programming language
+* Topic
+* Difficulty
+* Skill level
+* Algorithm
+* Data structure
+
+After completing a practice problem, the learner receives the same type of AI-powered feedback.
+
+This creates a safe environment where learners can experiment and improve.
+
+---
+
+# 9. AI Mentor
+
+The platform includes an **AI Mentor** that acts as a personalized learning assistant.
+
+The AI Mentor analyzes the learner's progress and recommends what they should study next.
+
+For example:
+
+> "You are performing well with loops and functions, but your recent problems involving arrays resulted in repeated indexing errors. Consider revising array traversal before moving to more advanced problems."
+
+The AI Mentor can provide:
+
+* Topic recommendations
+* Revision suggestions
+* Learning paths
+* Concept explanations
+* Hints
+* Study recommendations
+* Progress-based guidance
+
+The mentor should encourage the learner to solve problems independently rather than immediately providing complete solutions.
+
+### Suggested assistance levels
+
+**Level 1 — Hint**
+
+Provides a small clue.
+
+**Level 2 — Concept Explanation**
+
+Explains the relevant concept.
+
+**Level 3 — Detailed Solution Explanation**
+
+Provides a deeper explanation when explicitly requested.
+
+This keeps the AI focused on teaching rather than simply solving every problem for the learner.
+
+---
+
+# 10. AI-Powered Custom Course Generator
+
+A separate **Course Generator** allows learners to define their own learning objectives.
+
+For example:
+
+> "I want to learn Python from beginner to intermediate."
+
+or:
+
+> "Teach me arrays and algorithms for coding interviews."
+
+The AI generates a structured learning path.
+
+### Example structure
+
+```text
+Custom Course
+│
+├── Prerequisites
+│
+├── Learning Objectives
+│
+├── Module 1
+│   ├── Documentation
+│   ├── Explanation
+│   └── Examples
+│
+├── Module 2
+│   ├── Documentation
+│   ├── Explanation
+│   └── Examples
+│
+├── Practice Problems
+│
+├── Challenges
+│
+└── Final Assessment
+```
+
+The system should focus on providing **high-quality study documentation and questions**, rather than allowing the AI to replace the learning process.
+
+---
+
+# 11. AI-Assisted Web Research
+
+The platform can use web research to retrieve current and relevant educational information.
+
+The web research system should:
+
+1. Search for relevant sources.
+2. Retrieve appropriate educational content.
+3. Extract useful information.
+4. Sanitize retrieved content.
+5. Provide the information to the AI.
+6. Generate educational documentation.
+7. Preserve source URLs/citations.
+
+Web content must be treated as **untrusted data**.
+
+The AI must not blindly follow instructions contained inside retrieved webpages.
+
+The system should also respect applicable website policies and implement limits on:
+
+* Domains
+* Requests
+* Content size
+* Request duration
+* Retrieval frequency
+
+This makes web-assisted learning more reliable and safer.
+
+---
+
+# 12. Gamification System
+
+Gamification is used to make progress visible and encourage continued learning.
+
+The platform can include:
+
+### Islands
+
+Represent major learning challenges.
+
+### Badges
+
+Awarded for achievements such as:
+
+* First problem solved
+* 10 problems solved
+* First difficult problem
+* Consistent practice
+* Topic mastery
+* Island completion
+
+### Custom Badges
+
+The system can support personalized or special achievement badges.
+
+### Streaks
+
+Track consistent learning activity.
+
+### XP
+
+Provide a simple measure of progression.
+
+### Leaderboard
+
+Provide a competitive element for users who enjoy competition.
+
+The gamification system should encourage **positive learning behavior**, rather than punish learners excessively for mistakes.
+
+---
+
+# 13. Leaderboard
+
+The leaderboard ranks users based on meaningful learning activity.
+
+The initial proposed score is:
+
+```text
+(streak × total problems solved / 2) - problems failed
+```
+
+However, a pure formula based on the number of problems can encourage users to repeatedly solve very easy questions.
+
+A better approach is to incorporate problem difficulty.
+
+### Proposed conceptual scoring system
+
+```text
+Problem Points =
+    Base Points × Difficulty Weight
+
+Streak Bonus =
+    Streak × Streak Multiplier
+
+Final Score =
+    Total Problem Points
+    + Streak Bonus
+    + Achievement/Badge Points
+```
+
+Failures should have only a **small penalty or no direct severe penalty**, because failure is an important part of learning.
+
+This prevents learners from avoiding difficult questions simply to protect their leaderboard position.
+
+---
+
+# 14. User Progress System
+
+The platform tracks learning-related information such as:
+
+* Problems attempted
+* Problems solved
+* Problems failed
+* Current difficulty
+* Topic performance
+* Streak
+* XP
+* Badges
+* Islands captured
+* Practice history
+* Course progress
+* Weak topics
+* Strong topics
+
+This information powers the adaptive learning system and AI Mentor.
+
+---
+
+# 15. Proposed Data Architecture
+
+The system will use Supabase as the primary database and authentication platform.
+
+Major logical entities include:
+
+```text
+Users / Profiles
+        │
+        ├── Progress
+        ├── Attempts
+        ├── Streaks
+        ├── Badges
+        ├── Islands
+        ├── Courses
+        └── Learning Preferences
+
+Problems
+        │
+        └── Attempts
+
+Courses
+        │
+        ├── Modules
+        └── Progress
+
+Raised Problems
+        │
+        └── Moderation / Review
+```
+
+Potential database entities include:
+
+* `profiles`
+* `problems`
+* `problem_attempts`
+* `user_progress`
+* `badges`
+* `user_badges`
+* `custom_badges`
+* `islands`
+* `user_islands`
+* `streaks`
+* `raised_problems`
+* `courses`
+* `course_modules`
+* `course_progress`
+* `ai_mentor_sessions`
+
+Not every piece of derived information needs to be permanently stored. Where practical, statistics can be calculated from source data to avoid unnecessary database duplication.
+
+---
+
+# 16. Problem Reporting
+
+Users should be able to report problematic questions.
+
+Examples include:
+
+* Incorrect test case
+* Ambiguous question
+* Incorrect expected output
+* Wrong difficulty
+* Broken problem
+* Inappropriate content
+
+These reports are stored separately as **raised problems** and can be reviewed or processed before the problem is reused.
+
+This creates a feedback loop for improving AI-generated educational content.
+
+---
+
+# 17. Technology Stack
+
+The proposed system uses:
+
+### AI
+
+**Gemma-based AI model**
+
+Used for:
+
+* Problem generation
+* Code explanation
+* Feedback
+* Difficulty analysis
+* AI Mentor
+* Course generation
+* Learning recommendations
+
+### Database
+
+**Supabase**
+
+Used for:
+
+* User accounts
+* Authentication
+* User progress
+* Problems
+* Attempts
+* Badges
+* Courses
+* Learning data
+
+### Online Compiler
+
+**JDoodle**
+
+Used to safely execute submitted code in supported programming languages and evaluate it against test cases.
+
+### Web Research
+
+A controlled web-search/retrieval layer can provide current documentation and learning resources to the AI.
+
+---
+
+# 18. Security Requirements
+
+Security is a core requirement of the project.
+
+API credentials must **never be hardcoded into frontend source code**.
+
+Sensitive credentials should be stored using environment variables.
+
+Example:
+
+```env
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+
+SUPABASE_SERVICE_ROLE_KEY=
+
+GEMMA_API_KEY=
+
+JDOODLE_CLIENT_ID=
+JDOODLE_CLIENT_SECRET=
+
+WEB_SEARCH_API_KEY=
+```
+
+A `.env.example` file should document the required variables without containing real secrets.
+
+The actual `.env` file must be excluded from version control.
+
+### Required security principles
+
+* Never expose private API keys to the browser.
+* Keep JDoodle credentials server-side.
+* Keep AI provider credentials server-side.
+* Never expose the Supabase service-role key to the client.
+* Validate user input.
+* Validate AI-generated problems.
+* Sanitize web-retrieved content.
+* Implement appropriate authentication and authorization.
+* Use database-level access controls/RLS where appropriate.
+* Avoid leaking secrets through error messages or logs.
+* Apply rate limiting to expensive AI/compiler operations.
+* Limit web retrieval requests.
+* Prevent users from accessing other users' private data.
+* Do not trust AI-generated content blindly.
+* Treat external webpages as untrusted input.
+
+---
+
+# 19. High-Level System Architecture
+
+```text
+                         USER
+                           │
+                           ▼
+                 ┌──────────────────┐
+                 │   Web Frontend   │
+                 │                  │
+                 │ Dashboard        │
+                 │ Island Clash     │
+                 │ Practice         │
+                 │ AI Mentor        │
+                 │ Course Generator │
+                 │ Leaderboard      │
+                 └────────┬─────────┘
+                          │
+                          │ HTTPS
+                          ▼
+                 ┌──────────────────┐
+                 │ Backend / API    │
+                 │                  │
+                 │ Authentication   │
+                 │ AI orchestration  │
+                 │ Problem creation │
+                 │ Code execution   │
+                 │ Web research     │
+                 │ Validation       │
+                 └──────┬─────┬─────┘
+                        │     │
+              ┌─────────┘     └─────────┐
+              ▼                         ▼
+       ┌──────────────┐          ┌──────────────┐
+       │   Supabase   │          │ Gemma / AI   │
+       │              │          │              │
+       │ Users        │          │ Generation   │
+       │ Progress     │          │ Analysis     │
+       │ Problems     │          │ Mentor       │
+       │ Badges       │          │ Courses      │
+       └──────────────┘          └──────────────┘
+                                        │
+                         ┌──────────────┴─────────────┐
+                         ▼                            ▼
+                  ┌──────────────┐             ┌──────────────┐
+                  │   JDoodle    │             │ Web Research │
+                  │ Code Runner  │             │    Layer     │
+                  └──────────────┘             └──────────────┘
+```
+
+---
+
+# 20. Educational Philosophy
+
+The platform should not simply attempt to maximize the number of problems a learner completes.
+
+Its primary objective is to improve **actual programming ability**.
+
+Therefore:
+
+> **Gamification is the engagement layer; education remains the core product.**
+
+Every game mechanic should support learning.
+
+The system should encourage:
+
+* Understanding
+* Experimentation
+* Debugging
+* Reflection
+* Consistent practice
+* Gradual improvement
+* Independent problem solving
+
+Failure should be treated as a learning signal rather than purely as a negative outcome.
+
+---
+
+# 21. Expected User Experience
+
+A typical learner journey could look like:
+
+```text
+Sign Up
+   ↓
+Initial Skill Assessment
+   ↓
+Personalized Starting Difficulty
+   ↓
+Explore Learning Map
+   ↓
+Enter Island Clash
+   ↓
+Receive Coding Challenge
+   ↓
+Write and Run Code
+   ↓
+Solve Problem
+   ↓
+Capture Island
+   ↓
+Receive AI Code Analysis
+   ↓
+Earn XP / Badge
+   ↓
+Difficulty Adjusts
+   ↓
+AI Mentor Updates Recommendations
+   ↓
+Practice Weak Topic
+   ↓
+Progress Through More Islands
+   ↓
+Generate Custom Course
+   ↓
+Improve Programming Skills
+```
+
+---
+
+# 22. Expected Impact
+
+The proposed platform aims to make coding education:
+
+* More engaging
+* More personalized
+* More interactive
+* More accessible to beginners
+* More responsive to individual performance
+* More focused on understanding mistakes
+* More structured for independent learners
+
+Instead of simply asking:
+
+> "Did the code pass?"
+
+the platform attempts to answer:
+
+> **"What did the learner understand, what did they struggle with, why did they struggle, and what should they learn next?"**
+
+---
+
+# 23. Project Goal
+
+The ultimate goal of the project is to build an **adaptive AI-powered coding-learning environment** where programming education combines the structure of a learning platform with the engagement of a game.
+
+The system uses AI not merely to generate questions, but as a learning intelligence layer that continuously supports the learner through:
+
+**Challenge → Attempt → Evaluation → Feedback → Adaptation → Recommendation → Improvement**
+
+The result is intended to be a platform where learners can **practice coding, understand their mistakes, discover what to learn next, and visibly progress through a gamified learning world.**
+
+---
+
+# 24. Project Vision
+
+### "Learn. Code. Conquer."
+
+The platform transforms programming from a collection of disconnected exercises into a progressive learning journey.
+
+Every solved problem represents progress.
+
+Every mistake provides information.
+
+Every completed challenge unlocks new content.
+
+And the AI continuously adapts the learning experience to the learner.
+
+**The game is the motivation.
+The AI is the guide.
+The coding is the skill.
+The learning is the goal.**
